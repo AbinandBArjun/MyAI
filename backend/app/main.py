@@ -1,8 +1,15 @@
 from fastapi import FastAPI
 
+from app.api.notes import router as notes_router
+
 app = FastAPI(
-    title="Mypedia API",
-    version="1.0.0"
+    title="Mypedia API"
+)
+
+app.include_router(
+    notes_router,
+    prefix="/notes",
+    tags=["Notes"]
 )
 
 @app.get("/")
