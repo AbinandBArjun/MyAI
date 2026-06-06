@@ -27,14 +27,20 @@ export default function News() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-4xl font-bold">
-        AI News
-      </h1>
+      <div>
+        <h1 className="text-4xl font-bold">
+          AI News Feed
+        </h1>
+
+        <p className="mt-2 text-gray-400">
+          Latest AI and technology news from TechCrunch.
+        </p>
+      </div>
 
       {articles.map((article, index) => (
         <div
           key={index}
-          className="bg-slate-800 p-5 rounded-xl"
+          className="rounded-xl bg-slate-800 p-5"
         >
           <h2 className="text-xl font-semibold">
             {article.title}
@@ -44,7 +50,7 @@ export default function News() {
             href={article.link}
             target="_blank"
             rel="noreferrer"
-            className="inline-block mt-3 text-blue-400"
+            className="mt-3 inline-block text-blue-400"
           >
             Read Article →
           </a>
