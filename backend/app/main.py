@@ -1,9 +1,16 @@
 from fastapi import FastAPI
-
+from fastapi.middleware.cors import CORSMiddleware
+from app.api.news import router as news_router
 from app.api.notes import router as notes_router
 
-app = FastAPI(
-    title="Mypedia API"
+app = FastAPI(title="Mypedia API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.include_router(
@@ -12,8 +19,12 @@ app.include_router(
     tags=["Notes"]
 )
 
+app.include_router(
+    news_router,
+    prefix="/news",
+    tags=["News"]
+)
+
 @app.get("/")
 def home():
-    return {
-        "message": "Mypedia Backend Running"
-    }
+    return {"message": "Mypedia Backend Running"}
