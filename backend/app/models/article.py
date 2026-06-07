@@ -24,5 +24,6 @@ class Article(Base):
     )
 
     url: Mapped[str] = mapped_column(
-        String(1000)
+        String(1000),
+        unique=True
     )
