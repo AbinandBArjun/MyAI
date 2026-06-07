@@ -11,7 +11,7 @@ export default function Notes() {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [notes, setNotes] = useState<Note[]>([]);
-
+  const [editingId, setEditingId] = useState<number | null>(null);
   const API_URL = "http://localhost:8000/notes";
 
   const fetchNotes = async () => {
@@ -41,13 +41,45 @@ export default function Notes() {
     }
   };
 
+
+  const updateNote = async () => {
+  if (!title || !content || editingId === null) return;
+
+  try {
+    await axios.put(`${API_URL}/${editingId}`, {
+      title,
+      content,
+    });
+
+    setTitle("");
+    setContent("");
+    setEditingId(null);
+
+    fetchNotes();
+  } catch (error) {
+    console.error(error);
+  }
+  };
+  const editNote = (note: Note) => {
+  setTitle(note.title);
+  setContent(note.content);
+  setEditingId(note.id);
+  };
+
   const deleteNote = async (id: number) => {
-    try {
-      await axios.delete(`${API_URL}/${id}`);
-      fetchNotes();
-    } catch (error) {
-      console.error(error);
+  try {
+    await axios.delete(`${API_URL}/${id}`);
+
+    if (editingId === id) {
+      setEditingId(null);
+      setTitle("");
+      setContent("");
     }
+
+    fetchNotes();
+  } catch (error) {
+    console.error(error);
+  }
   };
 
   useEffect(() => {
@@ -76,10 +108,16 @@ export default function Notes() {
         />
 
         <button
-          onClick={createNote}
-          className="rounded-lg bg-blue-600 px-5 py-2"
-        >
-          Create Note
+          onClick={
+            editingId === null
+              ? createNote
+              : updateNote
+            }
+            className="rounded-lg bg-blue-600 px-5 py-2"
+          >
+            {editingId === null
+              ? "Create Note"
+              : "Update Note"}
         </button>
       </div>
 
@@ -97,12 +135,21 @@ export default function Notes() {
               {note.content}
             </p>
 
-            <button
-              onClick={() => deleteNote(note.id)}
-              className="mt-4 rounded bg-red-600 px-4 py-2"
-            >
-              Delete
-            </button>
+            <div className="mt-4 flex gap-3">
+      <button
+        onClick={() => editNote(note)}
+          className="rounded bg-yellow-600 px-4 py-2"
+        >
+          Edit
+      </button>
+
+  <button
+    onClick={() => deleteNote(note.id)}
+    className="rounded bg-red-600 px-4 py-2"
+  >
+    Delete
+  </button>
+</div>
           </div>
         ))}
       </div>

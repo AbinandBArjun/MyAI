@@ -51,3 +51,26 @@ def delete_note(
     return {
         "message": "Note deleted"
     }
+@router.put("/{note_id}")
+def update_note(
+    note_id: int,
+    updated_note: NoteCreate,
+    db: Session = Depends(get_db)
+):
+    note = db.query(Note).filter(
+        Note.id == note_id
+    ).first()
+
+    if not note:
+        raise HTTPException(
+            status_code=404,
+            detail="Note not found"
+        )
+
+    note.title = updated_note.title
+    note.content = updated_note.content
+
+    db.commit()
+    db.refresh(note)
+
+    return note
