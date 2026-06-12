@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.news import router as news_router
 from app.api.notes import router as notes_router
 from app.api.articles import router as articles_router
+from app.api import chat
 
 app = FastAPI(title="Mypedia API")
 
@@ -30,6 +31,12 @@ app.include_router(
     articles_router,
     prefix="/articles",
     tags=["Articles"]
+)
+
+app.include_router(
+    chat.router,
+    prefix="/chat",
+    tags=["Chat"]
 )
 
 @app.get("/")
