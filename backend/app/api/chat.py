@@ -1,10 +1,9 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 from pydantic import BaseModel
-from sqlalchemy.orm import Session
 
 from app.services.chat_service import ask_llm
-from app.database.database import get_db
 from app.rag.retriever import retrieve_context
+from app.database.database import SessionLocal
 
 router = APIRouter()
 
@@ -14,27 +13,24 @@ class ChatRequest(BaseModel):
 
 
 @router.post("/")
-def chat(
-    request: ChatRequest,
-    db: Session = Depends(get_db)
-):
-    context = retrieve_context(
-        request.message,
-        db
-    )
+def chat(request: ChatRequest):
 
-    prompt = f"""
-Context:
-{context}
+    db = SessionLocal()
 
-Question:
-{request.message}
+    try:
+        context = retrieve_context(
+            request.message,
+            db
+        )
 
-Answer using the provided context when relevant.
-"""
+        response = ask_llm(
+            request.message,
+            context
+        )
 
-    response = ask_llm(prompt)
+        return {
+            "response": response
+        }
 
-    return {
-        "response": response
-    }
+    finally:
+        db.close()
