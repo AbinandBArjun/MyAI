@@ -3,6 +3,7 @@ import time
 
 OLLAMA_URL = "http://localhost:11434/api/generate"
 
+
 def ask_llm(query: str, context: str):
     start = time.time()
 
@@ -24,24 +25,6 @@ Question:
 
 Answer:
 """
-   
-    response = requests.post(
-        OLLAMA_URL,
-        json={
-            "model": "qwen3:4b-instruct-2507-q4_K_M",
-            "prompt": prompt,
-            "stream": False
-        }
-    )
-
-    print(
-        f"Generation took {time.time() - start:.2f} seconds"
-    )
-
-    print("OLLAMA STATUS:", response.status_code)
-    print("OLLAMA RESPONSE:", response.text)
-
-    return response.json()["response"]
 
     response = requests.post(
         OLLAMA_URL,
