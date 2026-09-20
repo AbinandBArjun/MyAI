@@ -11,26 +11,13 @@ import Trends from "./pages/Trends";
 
 function App() {
   return (
-    <div
-      style={{
-        display: "flex",
-        minHeight: "100vh",
-      }}
-    >
+    <div className="flex min-h-screen bg-slate-950 text-white">
       <Sidebar />
 
-      <div
-        style={{
-          flex: 1,
-        }}
-      >
+      <div className="flex min-w-0 flex-1 flex-col">
         <Navbar />
 
-        <div
-          style={{
-            padding: "20px",
-          }}
-        >
+        <main className="flex-1 px-8 py-8">
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/news" element={<News />} />
@@ -38,7 +25,7 @@ function App() {
             <Route path="/chat" element={<Chat />} />
             <Route path="/trends" element={<Trends />} />
           </Routes>
-        </div>
+        </main>
       </div>
     </div>
   );
