@@ -1,40 +1,60 @@
 from app.database.database import SessionLocal
 from app.models.article import Article
 from app.ingestion.techcrunch import fetch_articles
+from app.services.embedding_service import save_embedding
 
 
 def save_articles():
     db = SessionLocal()
 
-    articles = fetch_articles()
+    try:
+        articles = fetch_articles()
 
-    count = 0
+        count = 0
 
-    for article in articles:
+        for article in articles:
 
-        existing = (
-            db.query(Article)
-            .filter(Article.url == article["url"])
-            .first()
-        )
+            existing = (
+                db.query(Article)
+                .filter(Article.url == article["url"])
+                .first()
+            )
 
-        if existing:
-            continue
+            if existing:
+                continue
 
-        new_article = Article(
-            title=article["title"],
-            summary=article["summary"],
-            source=article["source"],
-            url=article["url"],
-        )
+            new_article = Article(
+                title=article["title"],
+                summary=article["summary"],
+                source=article["source"],
+                url=article["url"],
+            )
 
-        db.add(new_article)
-        count += 1
+            db.add(new_article)
 
-    db.commit()
-    db.close()
+            # Generate the article ID before creating its embedding
+            db.flush()
 
-    print(f"Saved {count} new articles")
+            text = (
+                f"{new_article.title}\n"
+                f"{new_article.summary}"
+            )
+
+            save_embedding(
+                db=db,
+                document_type="ARTICLE",
+                document_id=new_article.id,
+                text=text
+            )
+
+            count += 1
+
+        db.commit()
+
+        print(f"Saved {count} new articles")
+
+    finally:
+        db.close()
 
 
 if __name__ == "__main__":

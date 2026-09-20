@@ -1,3 +1,4 @@
+from app.models.document_embedding import DocumentEmbedding
 from app.models.base import Base
 from app.models.article import Article
 from app.models.note import Note
