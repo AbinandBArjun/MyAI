@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
 
-const API_URL = "http://127.0.0.1:8000";
-
 interface Article {
   id: number;
   title: string;
@@ -22,16 +20,12 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function loadDashboard() {
+    const fetchDashboardData = async () => {
       try {
         const [articlesResponse, notesResponse] = await Promise.all([
-          fetch(`${API_URL}/articles/`),
-          fetch(`${API_URL}/notes/`),
+          fetch("http://127.0.0.1:8000/articles/"),
+          fetch("http://127.0.0.1:8000/notes/"),
         ]);
-
-        if (!articlesResponse.ok || !notesResponse.ok) {
-          throw new Error("Failed to load dashboard data");
-        }
 
         const articlesData = await articlesResponse.json();
         const notesData = await notesResponse.json();
@@ -39,120 +33,188 @@ export default function Dashboard() {
         setArticles(articlesData);
         setNotes(notesData);
       } catch (error) {
-        console.error("Dashboard loading error:", error);
+        console.error("Failed to load dashboard data:", error);
       } finally {
         setLoading(false);
       }
-    }
+    };
 
-    loadDashboard();
+    fetchDashboardData();
   }, []);
 
-  const latestArticles = articles.slice(0, 5);
-
-  return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div>
-        <h1 className="text-5xl font-bold text-blue-400">
-          Mypedia Dashboard
-        </h1>
-
-        <p className="mt-2 text-gray-400">
-          Your AI knowledge and research hub.
+  if (loading) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <p className="text-sm text-slate-500">
+          Loading your knowledge space...
         </p>
       </div>
+    );
+  }
 
-      {/* Stats */}
-      <div className="grid grid-cols-4 gap-4">
-        <div className="rounded-xl bg-slate-800 p-6">
-          <h3 className="text-gray-400">Articles</h3>
-          <p className="mt-2 text-3xl font-bold">
-            {loading ? "..." : articles.length}
+  return (
+    <div className="mx-auto max-w-7xl space-y-8">
+      {/* Welcome Section */}
+      <section>
+        <p className="mb-2 text-sm font-medium text-blue-400">
+          YOUR PERSONAL KNOWLEDGE SPACE
+        </p>
+
+        <h1 className="text-3xl font-bold tracking-tight text-white">
+          Welcome back, Abinand.
+        </h1>
+
+        <p className="mt-2 max-w-2xl text-slate-400">
+          Discover ideas, organize your thoughts, and connect what you learn.
+        </p>
+      </section>
+
+      {/* Statistics */}
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
+          <p className="text-sm text-slate-500">Articles</p>
+          <p className="mt-3 text-3xl font-semibold text-white">
+            {articles.length}
+          </p>
+          <p className="mt-2 text-xs text-slate-500">
+            Saved knowledge sources
           </p>
         </div>
 
-        <div className="rounded-xl bg-slate-800 p-6">
-          <h3 className="text-gray-400">Notes</h3>
-          <p className="mt-2 text-3xl font-bold">
-            {loading ? "..." : notes.length}
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
+          <p className="text-sm text-slate-500">Notes</p>
+          <p className="mt-3 text-3xl font-semibold text-white">
+            {notes.length}
+          </p>
+          <p className="mt-2 text-xs text-slate-500">
+            Ideas captured by you
           </p>
         </div>
 
-        <div className="rounded-xl bg-slate-800 p-6">
-          <h3 className="text-gray-400">Bookmarks</h3>
-          <p className="mt-2 text-3xl font-bold">0</p>
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
+          <p className="text-sm text-slate-500">Topics</p>
+          <p className="mt-3 text-3xl font-semibold text-white">3</p>
+          <p className="mt-2 text-xs text-slate-500">
+            Areas of exploration
+          </p>
         </div>
 
-        <div className="rounded-xl bg-slate-800 p-6">
-          <h3 className="text-gray-400">Topics</h3>
-          <p className="mt-2 text-3xl font-bold">3</p>
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
+          <p className="text-sm text-slate-500">AI Assistant</p>
+          <p className="mt-3 text-3xl font-semibold text-emerald-400">
+            Ready
+          </p>
+          <p className="mt-2 text-xs text-slate-500">
+            Ask questions about your knowledge
+          </p>
         </div>
-      </div>
+      </section>
 
-      {/* Latest News */}
-      <div className="rounded-xl bg-slate-800 p-6">
-        <h2 className="mb-4 text-2xl font-semibold">
-          Latest AI News
-        </h2>
+      {/* Main Content */}
+      <section className="grid gap-8 lg:grid-cols-[1.5fr_1fr]">
+        {/* Recent Articles */}
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6">
+          <div className="mb-6 flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-white">
+                Recent Articles
+              </h2>
 
-        {loading ? (
-          <div className="rounded-lg border border-slate-700 p-4">
-            Loading articles...
+              <p className="mt-1 text-sm text-slate-500">
+                The latest knowledge added to your space.
+              </p>
+            </div>
+
+            <a
+              href="/news"
+              className="text-sm font-medium text-blue-400 transition hover:text-blue-300"
+            >
+              View all →
+            </a>
           </div>
-        ) : latestArticles.length === 0 ? (
-          <div className="rounded-lg border border-slate-700 p-4">
-            No articles available yet.
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {latestArticles.map((article) => (
-              <div
+
+          <div className="space-y-4">
+            {articles.slice(0, 5).map((article) => (
+              <article
                 key={article.id}
-                className="rounded-lg border border-slate-700 p-4"
+                className="rounded-xl border border-slate-800 bg-slate-950/50 p-4 transition hover:border-slate-700"
               >
-                <h3 className="text-lg font-semibold">
+                <div className="mb-2 flex items-center gap-2 text-xs text-slate-500">
+                  <span>{article.source}</span>
+                </div>
+
+                <h3 className="font-medium leading-relaxed text-slate-200">
                   {article.title}
                 </h3>
 
-                <p className="mt-2 text-gray-400">
+                <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-slate-500">
                   {article.summary}
                 </p>
-
-                <a
-                  href={article.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-2 inline-block text-blue-400 hover:underline"
-                >
-                  Read article →
-                </a>
-              </div>
+              </article>
             ))}
+
+            {articles.length === 0 && (
+              <p className="text-sm text-slate-500">
+                No articles available yet.
+              </p>
+            )}
           </div>
-        )}
-      </div>
-
-      {/* Trends */}
-      <div className="rounded-xl bg-slate-800 p-6">
-        <h2 className="mb-4 text-2xl font-semibold">
-          Trending Topics
-        </h2>
-
-        <div className="flex gap-3">
-          <span className="rounded-full bg-blue-600 px-4 py-2">
-            GPT
-          </span>
-
-          <span className="rounded-full bg-purple-600 px-4 py-2">
-            Agents
-          </span>
-
-          <span className="rounded-full bg-green-600 px-4 py-2">
-            MCP
-          </span>
         </div>
-      </div>
+
+        {/* Notes and Quick Actions */}
+        <div className="space-y-8">
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6">
+            <h2 className="text-lg font-semibold text-white">
+              Recent Notes
+            </h2>
+
+            <p className="mt-1 text-sm text-slate-500">
+              Your latest thoughts and ideas.
+            </p>
+
+            <div className="mt-5 space-y-3">
+              {notes.slice(0, 4).map((note) => (
+                <div
+                  key={note.id}
+                  className="rounded-xl border border-slate-800 bg-slate-950/50 p-4"
+                >
+                  <h3 className="font-medium text-slate-200">
+                    {note.title}
+                  </h3>
+
+                  <p className="mt-1 line-clamp-2 text-sm text-slate-500">
+                    {note.content}
+                  </p>
+                </div>
+              ))}
+
+              {notes.length === 0 && (
+                <p className="text-sm text-slate-500">
+                  No notes created yet.
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-blue-500/20 bg-blue-500/5 p-6">
+            <h2 className="text-lg font-semibold text-white">
+              Explore Your Knowledge
+            </h2>
+
+            <p className="mt-2 text-sm leading-relaxed text-slate-400">
+              Use the AI assistant to find connections, understand concepts,
+              and ask questions about your saved knowledge.
+            </p>
+
+            <a
+              href="/chat"
+              className="mt-5 inline-flex rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-500"
+            >
+              Ask AI Assistant →
+            </a>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
