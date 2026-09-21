@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 
 interface Article {
   id: number;
@@ -125,12 +126,12 @@ export default function Dashboard() {
               </p>
             </div>
 
-            <a
-              href="/news"
+            <Link
+              to="/news"
               className="text-sm font-medium text-blue-400 transition hover:text-blue-300"
             >
               View all →
-            </a>
+            </Link>
           </div>
 
           <div className="space-y-4">
@@ -206,12 +207,12 @@ export default function Dashboard() {
               and ask questions about your saved knowledge.
             </p>
 
-            <a
-              href="/chat"
+            <Link
+              to="/chat"
               className="mt-5 inline-flex rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-500"
             >
               Ask AI Assistant →
-            </a>
+            </Link>
           </div>
         </div>
       </section>
