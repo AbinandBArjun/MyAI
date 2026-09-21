@@ -74,9 +74,11 @@ export default function Dashboard() {
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
           <p className="text-sm text-slate-500">Articles</p>
+
           <p className="mt-3 text-3xl font-semibold text-white">
             {articles.length}
           </p>
+
           <p className="mt-2 text-xs text-slate-500">
             Saved knowledge sources
           </p>
@@ -84,9 +86,11 @@ export default function Dashboard() {
 
         <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
           <p className="text-sm text-slate-500">Notes</p>
+
           <p className="mt-3 text-3xl font-semibold text-white">
             {notes.length}
           </p>
+
           <p className="mt-2 text-xs text-slate-500">
             Ideas captured by you
           </p>
@@ -94,7 +98,9 @@ export default function Dashboard() {
 
         <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
           <p className="text-sm text-slate-500">Topics</p>
+
           <p className="mt-3 text-3xl font-semibold text-white">3</p>
+
           <p className="mt-2 text-xs text-slate-500">
             Areas of exploration
           </p>
@@ -102,9 +108,11 @@ export default function Dashboard() {
 
         <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
           <p className="text-sm text-slate-500">AI Assistant</p>
+
           <p className="mt-3 text-3xl font-semibold text-emerald-400">
             Ready
           </p>
+
           <p className="mt-2 text-xs text-slate-500">
             Ask questions about your knowledge
           </p>
@@ -164,6 +172,77 @@ export default function Dashboard() {
 
         {/* Notes and Quick Actions */}
         <div className="space-y-8">
+          {/* Quick Actions */}
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6">
+            <h2 className="text-lg font-semibold text-white">
+              Quick Actions
+            </h2>
+
+            <p className="mt-1 text-sm text-slate-500">
+              Continue exploring and organizing your knowledge.
+            </p>
+
+            <div className="mt-5 grid gap-3">
+              <Link
+                to="/notes"
+                className="group flex items-center justify-between rounded-xl border border-slate-800 bg-slate-950/50 p-4 transition hover:border-blue-500/50 hover:bg-slate-800/60"
+              >
+                <div>
+                  <p className="font-medium text-slate-200">
+                    Create a Note
+                  </p>
+
+                  <p className="mt-1 text-xs text-slate-500">
+                    Capture an idea or thought.
+                  </p>
+                </div>
+
+                <span className="text-slate-500 transition group-hover:translate-x-1 group-hover:text-blue-400">
+                  →
+                </span>
+              </Link>
+
+              <Link
+                to="/news"
+                className="group flex items-center justify-between rounded-xl border border-slate-800 bg-slate-950/50 p-4 transition hover:border-blue-500/50 hover:bg-slate-800/60"
+              >
+                <div>
+                  <p className="font-medium text-slate-200">
+                    Discover News
+                  </p>
+
+                  <p className="mt-1 text-xs text-slate-500">
+                    Explore the latest articles.
+                  </p>
+                </div>
+
+                <span className="text-slate-500 transition group-hover:translate-x-1 group-hover:text-blue-400">
+                  →
+                </span>
+              </Link>
+
+              <Link
+                to="/chat"
+                className="group flex items-center justify-between rounded-xl border border-slate-800 bg-slate-950/50 p-4 transition hover:border-blue-500/50 hover:bg-slate-800/60"
+              >
+                <div>
+                  <p className="font-medium text-slate-200">
+                    Ask AI Assistant
+                  </p>
+
+                  <p className="mt-1 text-xs text-slate-500">
+                    Ask questions about your knowledge.
+                  </p>
+                </div>
+
+                <span className="text-slate-500 transition group-hover:translate-x-1 group-hover:text-blue-400">
+                  →
+                </span>
+              </Link>
+            </div>
+          </div>
+
+          {/* Recent Notes */}
           <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6">
             <h2 className="text-lg font-semibold text-white">
               Recent Notes
@@ -197,6 +276,7 @@ export default function Dashboard() {
             </div>
           </div>
 
+          {/* Explore Your Knowledge */}
           <div className="rounded-2xl border border-blue-500/20 bg-blue-500/5 p-6">
             <h2 className="text-lg font-semibold text-white">
               Explore Your Knowledge
