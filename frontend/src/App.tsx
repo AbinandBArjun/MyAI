@@ -8,6 +8,7 @@ import News from "./pages/News";
 import Notes from "./pages/Notes";
 import Chat from "./pages/Chat";
 import Trends from "./pages/Trends";
+import AIChatWidget from "./components/AIChatWidget";
 
 function App() {
   return (
@@ -27,6 +28,8 @@ function App() {
           </Routes>
         </main>
       </div>
+      
+      <AIChatWidget />
     </div>
   );
 }
