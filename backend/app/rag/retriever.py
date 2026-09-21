@@ -1,3 +1,5 @@
+import re
+
 from sqlalchemy.orm import Session
 from sentence_transformers import util
 import numpy as np
@@ -9,7 +11,71 @@ from app.rag.embeddings import get_embedding
 
 
 TOP_K = 5
-SIMILARITY_THRESHOLD = 0.50
+SIMILARITY_THRESHOLD = 0.25
+
+
+def format_documents(documents, document_type: str):
+    """
+    Convert database documents into LLM-readable context.
+    """
+
+    context = []
+
+    for document in documents:
+        if document_type == "NOTE":
+            title = document.title
+            content = document.content
+        else:
+            title = document.title
+            content = document.summary
+
+        context.append(
+            f"{document_type}: {title}\n"
+            f"{content}"
+        )
+
+    return "\n\n".join(context)
+
+
+def detect_listing_intent(query: str):
+    """
+    Detect simple listing-style queries that should not depend
+    exclusively on semantic similarity.
+    """
+
+    normalized_query = query.lower().strip()
+
+    note_patterns = [
+        r"\bwhat notes do i have\b",
+        r"\blist my notes\b",
+        r"\bshow my notes\b",
+        r"\bshow me my notes\b",
+        r"\bmy saved notes\b",
+        r"\bwhat are my notes\b",
+    ]
+
+    article_patterns = [
+        r"\bwhat articles do i have\b",
+        r"\blist my articles\b",
+        r"\bshow my articles\b",
+        r"\bshow me my articles\b",
+        r"\bmy saved articles\b",
+        r"\bwhat are my articles\b",
+    ]
+
+    if any(
+        re.search(pattern, normalized_query)
+        for pattern in note_patterns
+    ):
+        return "NOTE"
+
+    if any(
+        re.search(pattern, normalized_query)
+        for pattern in article_patterns
+    ):
+        return "ARTICLE"
+
+    return None
 
 
 def retrieve_context(
@@ -17,11 +83,58 @@ def retrieve_context(
     db: Session
 ):
     """
-    Retrieve relevant notes and articles using
-    embeddings stored in PostgreSQL.
+    Retrieve relevant notes and articles using stored embeddings.
+
+    Listing queries are handled directly from the database.
+    Other queries use cosine similarity over stored embeddings.
     """
 
-    # Generate an embedding only for the user's query
+    # ---------------------------------------------------------
+    # 1. Handle direct listing queries
+    # ---------------------------------------------------------
+
+    listing_type = detect_listing_intent(query)
+
+    if listing_type == "NOTE":
+        notes = (
+            db.query(Note)
+            .order_by(Note.id.desc())
+            .limit(20)
+            .all()
+        )
+
+        print(
+            f"Listing query detected: returning "
+            f"{len(notes)} notes"
+        )
+
+        if not notes:
+            return ""
+
+        return format_documents(notes, "NOTE")
+
+    if listing_type == "ARTICLE":
+        articles = (
+            db.query(Article)
+            .order_by(Article.id.desc())
+            .limit(20)
+            .all()
+        )
+
+        print(
+            f"Listing query detected: returning "
+            f"{len(articles)} articles"
+        )
+
+        if not articles:
+            return ""
+
+        return format_documents(articles, "ARTICLE")
+
+    # ---------------------------------------------------------
+    # 2. Perform semantic retrieval for normal queries
+    # ---------------------------------------------------------
+
     query_embedding = get_embedding(query)
 
     stored_embeddings = (
@@ -36,13 +149,11 @@ def retrieve_context(
         if stored_embedding.embedding is None:
             continue
 
-        # Convert the PostgreSQL vector into a NumPy array
         document_embedding = np.array(
             stored_embedding.embedding,
             dtype=np.float32
         )
 
-        # Calculate cosine similarity
         score = util.cos_sim(
             query_embedding,
             document_embedding
@@ -75,14 +186,10 @@ def retrieve_context(
         if document is None:
             continue
 
-        # Extract title and content
         if stored_embedding.document_type == "NOTE":
-
             title = document.title
             content = document.content
-
         else:
-
             title = document.title
             content = document.summary
 
@@ -91,17 +198,16 @@ def retrieve_context(
                 "type": stored_embedding.document_type,
                 "title": title,
                 "content": content,
-                "score": score
+                "score": score,
             }
         )
 
-    # Sort all candidates from highest to lowest similarity
+    # Sort candidates by similarity
     candidates.sort(
         key=lambda item: item["score"],
         reverse=True
     )
 
-    # Debugging: display the top 10 candidates
     print("\nTop retrieved candidates:")
 
     for item in candidates[:10]:
@@ -111,7 +217,7 @@ def retrieve_context(
             f"(score={item['score']:.3f})"
         )
 
-    # Keep only candidates above the similarity threshold
+    # Keep candidates above the relaxed threshold
     relevant = [
         item
         for item in candidates
@@ -122,7 +228,6 @@ def retrieve_context(
         f"Retrieved {len(relevant)} relevant items"
     )
 
-    # Display the final selected documents
     for item in relevant:
         print(
             f"Selected: "
@@ -131,11 +236,9 @@ def retrieve_context(
             f"(score={item['score']:.3f})"
         )
 
-    # Return an empty context if nothing relevant was found
     if not relevant:
         return ""
 
-    # Build the context passed to the LLM
     context = []
 
     for item in relevant:
