@@ -4,7 +4,6 @@ const navigationItems = [
   { name: "Dashboard", path: "/", icon: "⌂", end: true },
   { name: "News", path: "/news", icon: "◈" },
   { name: "Notes", path: "/notes", icon: "▤" },
-  { name: "Chat", path: "/chat", icon: "◌" },
   { name: "Trends", path: "/trends", icon: "↗" },
 ];
 
