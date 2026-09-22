@@ -2,13 +2,12 @@ import { Routes, Route } from "react-router-dom";
 
 import Sidebar from "./components/Sidebar";
 import Navbar from "./components/Navbar";
+import AIChatWidget from "./components/AIChatWidget";
 
 import Dashboard from "./pages/Dashboard";
 import News from "./pages/News";
 import Notes from "./pages/Notes";
-import Chat from "./pages/Chat";
 import Trends from "./pages/Trends";
-import AIChatWidget from "./components/AIChatWidget";
 
 function App() {
   return (
@@ -23,12 +22,11 @@ function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/news" element={<News />} />
             <Route path="/notes" element={<Notes />} />
-            <Route path="/chat" element={<Chat />} />
             <Route path="/trends" element={<Trends />} />
           </Routes>
         </main>
       </div>
-      
+
       <AIChatWidget />
     </div>
   );
