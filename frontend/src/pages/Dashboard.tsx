@@ -220,25 +220,6 @@ export default function Dashboard() {
                   →
                 </span>
               </Link>
-
-              <Link
-                to="/chat"
-                className="group flex items-center justify-between rounded-xl border border-slate-800 bg-slate-950/50 p-4 transition hover:border-blue-500/50 hover:bg-slate-800/60"
-              >
-                <div>
-                  <p className="font-medium text-slate-200">
-                    Ask AI Assistant
-                  </p>
-
-                  <p className="mt-1 text-xs text-slate-500">
-                    Ask questions about your knowledge.
-                  </p>
-                </div>
-
-                <span className="text-slate-500 transition group-hover:translate-x-1 group-hover:text-blue-400">
-                  →
-                </span>
-              </Link>
             </div>
           </div>
 
@@ -274,25 +255,6 @@ export default function Dashboard() {
                 </p>
               )}
             </div>
-          </div>
-
-          {/* Explore Your Knowledge */}
-          <div className="rounded-2xl border border-blue-500/20 bg-blue-500/5 p-6">
-            <h2 className="text-lg font-semibold text-white">
-              Explore Your Knowledge
-            </h2>
-
-            <p className="mt-2 text-sm leading-relaxed text-slate-400">
-              Use the AI assistant to find connections, understand concepts,
-              and ask questions about your saved knowledge.
-            </p>
-
-            <Link
-              to="/chat"
-              className="mt-5 inline-flex rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-500"
-            >
-              Ask AI Assistant →
-            </Link>
           </div>
         </div>
       </section>
