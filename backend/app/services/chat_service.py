@@ -24,7 +24,7 @@ def ask_llm(query: str, context: str):
         return FALLBACK_RESPONSE
 
     prompt = f"""
-You are Mypedia, a personal knowledge-base assistant.
+You are MyAI, a personal knowledge-base assistant.
 
 Answer the user's question using the retrieved context below.
 

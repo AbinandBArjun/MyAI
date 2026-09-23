@@ -5,7 +5,7 @@ from app.api.notes import router as notes_router
 from app.api.articles import router as articles_router
 from app.api import chat
 
-app = FastAPI(title="Mypedia API")
+app = FastAPI(title="MyAI API")
 
 app.add_middleware(
     CORSMiddleware,
@@ -41,4 +41,4 @@ app.include_router(
 
 @app.get("/")
 def home():
-    return {"message": "Mypedia Backend Running"}
+    return {"message": "MyAI Backend Running"}
