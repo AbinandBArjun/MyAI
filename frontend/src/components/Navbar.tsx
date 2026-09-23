@@ -11,7 +11,7 @@ const pageTitles: Record<string, string> = {
 export default function Navbar() {
   const location = useLocation();
 
-  const pageTitle = pageTitles[location.pathname] || "Mypedia";
+  const pageTitle = pageTitles[location.pathname] || "MyAI";
 
   return (
     <header className="flex items-center justify-between border-b border-slate-800 bg-slate-950/80 px-8 py-5 backdrop-blur">

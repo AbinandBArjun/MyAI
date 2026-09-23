@@ -51,7 +51,7 @@ export default function News() {
             </h1>
 
             <p className="mt-3 max-w-2xl text-gray-400">
-              Explore articles collected and organized inside Mypedia.
+              Explore articles collected and organized inside MyAI.
             </p>
           </div>
 

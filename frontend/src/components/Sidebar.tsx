@@ -19,7 +19,7 @@ export default function Sidebar() {
 
           <div>
             <h1 className="text-xl font-bold tracking-tight text-white">
-              Mypedia
+              MyAI
             </h1>
 
             <p className="text-xs text-slate-500">
@@ -61,7 +61,7 @@ export default function Sidebar() {
       {/* Footer */}
       <div className="border-t border-slate-800 pt-4">
         <p className="px-3 text-xs text-slate-600">
-          Mypedia · Personal Knowledge
+          MyAI · Personal Knowledge
         </p>
       </div>
     </aside>
