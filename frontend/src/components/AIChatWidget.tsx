@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import axios from "axios";
 
 interface Message {
@@ -11,6 +11,14 @@ export default function AIChatWidget() {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
+
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({
+      behavior: "smooth",
+    });
+  }, [messages, loading]);
 
   const sendMessage = async () => {
     const trimmedMessage = message.trim();
@@ -157,6 +165,8 @@ export default function AIChatWidget() {
                 </div>
               </div>
             )}
+
+            <div ref={messagesEndRef} />
           </div>
 
           {/* Input */}
