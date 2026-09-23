@@ -22,11 +22,7 @@ export default function AIChatWidget() {
       content: trimmedMessage,
     };
 
-    setMessages((previous) => [
-      ...previous,
-      userMessage,
-    ]);
-
+    setMessages((previous) => [...previous, userMessage]);
     setMessage("");
     setLoading(true);
 
@@ -63,6 +59,12 @@ export default function AIChatWidget() {
     }
   };
 
+  const clearConversation = () => {
+    if (loading) return;
+
+    setMessages([]);
+  };
+
   return (
     <>
       {/* Floating Button */}
@@ -89,13 +91,24 @@ export default function AIChatWidget() {
               </p>
             </div>
 
-            <button
-              onClick={() => setIsOpen(false)}
-              className="text-xl text-gray-400 transition hover:text-white"
-              aria-label="Close chat"
-            >
-              ×
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={clearConversation}
+                disabled={loading || messages.length === 0}
+                className="text-xs text-gray-400 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
+                aria-label="Clear conversation"
+              >
+                Clear
+              </button>
+
+              <button
+                onClick={() => setIsOpen(false)}
+                className="text-xl text-gray-400 transition hover:text-white"
+                aria-label="Close chat"
+              >
+                ×
+              </button>
+            </div>
           </div>
 
           {/* Messages */}
