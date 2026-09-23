@@ -78,7 +78,7 @@ export default function AIChatWidget() {
       {/* Floating Button */}
       <button
         onClick={() => setIsOpen((previous) => !previous)}
-        className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-2xl shadow-lg transition hover:bg-blue-500"
+        className="fixed bottom-4 right-4 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-2xl shadow-lg transition hover:bg-blue-500 sm:bottom-6 sm:right-6"
         aria-label="Toggle AI assistant"
       >
         {isOpen ? "×" : "✦"}
@@ -86,7 +86,7 @@ export default function AIChatWidget() {
 
       {/* Chat Panel */}
       {isOpen && (
-        <div className="fixed bottom-24 right-6 z-50 flex h-[520px] w-[360px] flex-col overflow-hidden rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl">
+        <div className="fixed bottom-24 right-4 z-50 flex h-[min(520px,calc(100vh-7rem))] w-[calc(100vw-2rem)] max-w-[360px] flex-col overflow-hidden rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl sm:right-6">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-slate-700 bg-slate-800 px-4 py-4">
             <div>
