@@ -54,12 +54,26 @@ export default function AIChatWidget() {
     } catch (error) {
       console.error("Failed to send message:", error);
 
+      let errorMessage =
+        "Something went wrong while processing your request.";
+      
+      if (axios.isAxiosError(error)) {
+        if (!error.response) {
+          errorMessage =
+            "I couldn't connect to MyAI. Please make sure the backend is running.";
+          } else if (error.response.status >= 500) {
+            errorMessage =
+              "MyAI encountered a server error while processing your request. Please try again.";
+          } else if (error.response.status >= 400) {
+            errorMessage =
+              "MyAI couldn't process that request. Please check your message and try again.";
+          }
+      }
       setMessages((previous) => [
         ...previous,
         {
           role: "assistant",
-          content:
-            "Sorry, I couldn't connect to the AI assistant. Please make sure the backend is running.",
+          content: errorMessage,
         },
       ]);
     } finally {
