@@ -1,9 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import axios from "axios";
 
+interface Source {
+  type: "NOTE" | "ARTICLE";
+  id: number;
+  title: string;
+  score?: number;
+}
+
 interface Message {
   role: "user" | "assistant";
   content: string;
+  sources?: Source[];
 }
 
 export default function AIChatWidget() {
@@ -45,6 +53,7 @@ export default function AIChatWidget() {
       const assistantMessage: Message = {
         role: "assistant",
         content: response.data.response,
+        sources: response.data.sources || [],
       };
 
       setMessages((previous) => [
@@ -161,13 +170,44 @@ export default function AIChatWidget() {
                 }`}
               >
                 <div
-                  className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-4 py-3 text-sm leading-6 ${
+                  className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-6 ${
                     item.role === "user"
-                      ? "rounded-br-sm bg-blue-600 text-white"
+                      ? "whitespace-pre-wrap rounded-br-sm bg-blue-600 text-white"
                       : "rounded-bl-sm bg-slate-800 text-gray-200"
                   }`}
                 >
-                  {item.content}
+                  <div className="whitespace-pre-wrap">
+                    {item.content}
+                  </div>
+
+                  {item.role === "assistant" &&
+                    item.sources &&
+                    item.sources.length > 0 && (
+                      <div className="mt-3 border-t border-slate-700 pt-3">
+                        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                          Sources
+                        </p>
+
+                        <div className="space-y-1.5">
+                          {item.sources.map((source) => (
+                            <div
+                              key={`${source.type}-${source.id}`}
+                              className="rounded-lg bg-slate-900/70 px-2.5 py-2"
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-semibold text-blue-400">
+                                  {source.type}
+                                </span>
+
+                                <span className="truncate text-xs text-slate-300">
+                                  {source.title}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                 </div>
               </div>
             ))}
