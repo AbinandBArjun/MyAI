@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
 interface Source {
@@ -9,31 +8,31 @@ interface Source {
   score?: number;
 }
 
+interface AIChatContext {
+  type: "NOTE" | "ARTICLE";
+  id: number;
+  title?: string;
+}
+
 interface Message {
   role: "user" | "assistant";
   content: string;
   sources?: Source[];
 }
 
-export default function AIChatWidget() {
-  const navigate = useNavigate();
+interface AIChatWidgetProps {
+  context?: AIChatContext;
+}
 
+export default function AIChatWidget({
+  context,
+}: AIChatWidgetProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
-
-  const openSource = (source: Source) => {
-    if (source.type === "NOTE") {
-      navigate("/notes");
-    } else if (source.type === "ARTICLE") {
-      navigate("/news");
-    }
-
-    setIsOpen(false);
-  };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({
@@ -44,14 +43,20 @@ export default function AIChatWidget() {
   const sendMessage = async () => {
     const trimmedMessage = message.trim();
 
-    if (!trimmedMessage || loading) return;
+    if (!trimmedMessage || loading) {
+      return;
+    }
 
     const userMessage: Message = {
       role: "user",
       content: trimmedMessage,
     };
 
-    setMessages((previous) => [...previous, userMessage]);
+    setMessages((previous) => [
+      ...previous,
+      userMessage,
+    ]);
+
     setMessage("");
     setLoading(true);
 
@@ -60,6 +65,12 @@ export default function AIChatWidget() {
         "http://localhost:8000/chat/",
         {
           message: trimmedMessage,
+          context: context
+            ? {
+                type: context.type,
+                id: context.id,
+              }
+            : undefined,
         }
       );
 
@@ -74,7 +85,10 @@ export default function AIChatWidget() {
         assistantMessage,
       ]);
     } catch (error) {
-      console.error("Failed to send message:", error);
+      console.error(
+        "Failed to send message:",
+        error
+      );
 
       let errorMessage =
         "Something went wrong while processing your request.";
@@ -105,16 +119,26 @@ export default function AIChatWidget() {
   };
 
   const clearConversation = () => {
-    if (loading) return;
+    if (loading) {
+      return;
+    }
 
     setMessages([]);
   };
+
+  const contextLabel = context
+    ? context.type === "NOTE"
+      ? "Note"
+      : "Article"
+    : null;
 
   return (
     <>
       {/* Floating Button */}
       <button
-        onClick={() => setIsOpen((previous) => !previous)}
+        onClick={() =>
+          setIsOpen((previous) => !previous)
+        }
         className="fixed bottom-4 right-4 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-2xl shadow-lg transition hover:bg-blue-500 sm:bottom-6 sm:right-6"
         aria-label="Toggle AI assistant"
       >
@@ -124,22 +148,38 @@ export default function AIChatWidget() {
       {/* Chat Panel */}
       {isOpen && (
         <div className="fixed bottom-24 right-4 z-50 flex h-[min(520px,calc(100vh-7rem))] w-[calc(100vw-2rem)] max-w-[360px] flex-col overflow-hidden rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl sm:right-6">
+
           {/* Header */}
           <div className="flex items-center justify-between border-b border-slate-700 bg-slate-800 px-4 py-4">
-            <div>
+
+            <div className="min-w-0">
               <h2 className="font-semibold text-white">
                 MyAI
               </h2>
 
-              <p className="text-xs text-gray-400">
-                Your personal knowledge assistant
-              </p>
+              {context ? (
+                <p
+                  className="mt-1 truncate text-xs text-blue-400"
+                  title={context.title}
+                >
+                  {contextLabel}:{" "}
+                  {context.title ||
+                    `#${context.id}`}
+                </p>
+              ) : (
+                <p className="mt-1 text-xs text-gray-400">
+                  Your personal knowledge assistant
+                </p>
+              )}
             </div>
 
             <div className="flex items-center gap-3">
               <button
                 onClick={clearConversation}
-                disabled={loading || messages.length === 0}
+                disabled={
+                  loading ||
+                  messages.length === 0
+                }
                 className="text-xs text-gray-400 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
                 aria-label="Clear conversation"
               >
@@ -158,18 +198,24 @@ export default function AIChatWidget() {
 
           {/* Messages */}
           <div className="flex-1 space-y-4 overflow-y-auto p-4">
+
             {messages.length === 0 && (
               <div className="mt-12 text-center">
+
                 <div className="text-3xl text-blue-400">
                   ✦
                 </div>
 
                 <h3 className="mt-3 font-medium text-white">
-                  How can I help?
+                  {context
+                    ? `Ask about this ${contextLabel?.toLowerCase()}`
+                    : "How can I help?"}
                 </h3>
 
                 <p className="mt-2 text-sm text-gray-400">
-                  Ask questions about your notes and saved articles.
+                  {context
+                    ? "Ask questions about the current document."
+                    : "Ask questions about your notes and saved articles."}
                 </p>
               </div>
             )}
@@ -190,6 +236,7 @@ export default function AIChatWidget() {
                       : "rounded-bl-sm bg-slate-800 text-gray-200"
                   }`}
                 >
+
                   <div className="whitespace-pre-wrap">
                     {item.content}
                   </div>
@@ -199,47 +246,54 @@ export default function AIChatWidget() {
                     item.sources &&
                     item.sources.length > 0 && (
                       <div className="mt-3 border-t border-slate-700 pt-3">
+
                         <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
                           Sources
                         </p>
 
                         <div className="space-y-1.5">
-                          {item.sources.map((source) => (
-                            <button
-                              key={`${source.type}-${source.id}`}
-                              type="button"
-                              onClick={() => openSource(source)}
-                              className="w-full rounded-lg bg-slate-900/70 px-2.5 py-2 text-left transition hover:bg-slate-700/70"
-                            >
-                              <div className="flex items-center gap-2">
-                                <span className="shrink-0 text-[10px] font-semibold text-blue-400">
-                                  {source.type}
-                                </span>
+                          {item.sources.map(
+                            (source) => (
+                              <div
+                                key={`${source.type}-${source.id}`}
+                                className="rounded-lg bg-slate-900/70 px-2.5 py-2"
+                              >
+                                <div className="flex items-center gap-2">
 
-                                <span className="truncate text-xs text-slate-300">
-                                  {source.title}
-                                </span>
+                                  <span className="text-[10px] font-semibold text-blue-400">
+                                    {source.type}
+                                  </span>
 
-                                <span className="ml-auto shrink-0 text-xs text-slate-500">
-                                  →
-                                </span>
+                                  <span
+                                    className="truncate text-xs text-slate-300"
+                                    title={source.title}
+                                  >
+                                    {source.title}
+                                  </span>
+
+                                </div>
                               </div>
-                            </button>
-                          ))}
+                            )
+                          )}
                         </div>
                       </div>
                     )}
+
                 </div>
               </div>
             ))}
 
-            {/* Loading Indicator */}
+            {/* Loading */}
             {loading && (
               <div className="flex justify-start">
                 <div className="flex items-center gap-1 rounded-2xl rounded-bl-sm bg-slate-800 px-4 py-3">
+
                   <span className="h-2 w-2 animate-bounce rounded-full bg-blue-400 [animation-delay:-0.3s]" />
+
                   <span className="h-2 w-2 animate-bounce rounded-full bg-blue-400 [animation-delay:-0.15s]" />
+
                   <span className="h-2 w-2 animate-bounce rounded-full bg-blue-400" />
+
                 </div>
               </div>
             )}
@@ -249,7 +303,9 @@ export default function AIChatWidget() {
 
           {/* Input */}
           <div className="border-t border-slate-700 bg-slate-800/80 p-3">
+
             <div className="flex items-end gap-2">
+
               <textarea
                 value={message}
                 onChange={(event) =>
@@ -264,23 +320,32 @@ export default function AIChatWidget() {
                     sendMessage();
                   }
                 }}
-                placeholder="Ask your knowledge assistant..."
+                placeholder={
+                  context
+                    ? `Ask about this ${contextLabel?.toLowerCase()}...`
+                    : "Ask your knowledge assistant..."
+                }
                 rows={2}
                 className="min-w-0 flex-1 resize-none rounded-xl border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-white outline-none placeholder:text-slate-600 focus:border-blue-500"
               />
 
               <button
                 onClick={sendMessage}
-                disabled={loading || !message.trim()}
+                disabled={
+                  loading ||
+                  !message.trim()
+                }
                 className="rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 ↑
               </button>
+
             </div>
 
             <p className="mt-2 text-[11px] text-gray-500">
               Enter to send · Shift + Enter for a new line
             </p>
+
           </div>
         </div>
       )}

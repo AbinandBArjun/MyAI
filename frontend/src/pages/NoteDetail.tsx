@@ -81,6 +81,8 @@ export default function NoteDetail() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-8">
+
+      {/* Back Button */}
       <button
         onClick={() => navigate("/notes")}
         className="text-sm font-medium text-blue-400 transition hover:text-blue-300"
@@ -88,7 +90,9 @@ export default function NoteDetail() {
         ← Back to Notes
       </button>
 
+      {/* Note */}
       <article className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 shadow-lg sm:p-8">
+
         <div className="mb-6">
           <p className="text-sm font-medium uppercase tracking-[0.2em] text-blue-400">
             Personal Note
@@ -104,6 +108,7 @@ export default function NoteDetail() {
             {note.content}
           </p>
         </div>
+
       </article>
     </div>
   );

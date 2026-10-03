@@ -83,6 +83,8 @@ export default function ArticleDetail() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-8">
+
+      {/* Back Button */}
       <button
         onClick={() => navigate("/news")}
         className="text-sm font-medium text-blue-400 transition hover:text-blue-300"
@@ -90,8 +92,11 @@ export default function ArticleDetail() {
         ← Back to News
       </button>
 
+      {/* Article */}
       <article className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 shadow-lg sm:p-8">
+
         <div className="flex flex-wrap items-center gap-3">
+
           <span className="rounded-full bg-blue-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-blue-400">
             {article.source}
           </span>
@@ -99,6 +104,7 @@ export default function ArticleDetail() {
           <span className="text-xs text-slate-500">
             Article #{article.id}
           </span>
+
         </div>
 
         <h1 className="mt-5 text-3xl font-bold leading-tight tracking-tight text-white sm:text-4xl">
@@ -112,6 +118,7 @@ export default function ArticleDetail() {
         </div>
 
         <div className="mt-8 border-t border-slate-800 pt-6">
+
           <a
             href={article.url}
             target="_blank"
@@ -119,9 +126,14 @@ export default function ArticleDetail() {
             className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-500"
           >
             Read Original Article
-            <span>↗</span>
+
+            <span>
+              ↗
+            </span>
           </a>
+
         </div>
+
       </article>
     </div>
   );
