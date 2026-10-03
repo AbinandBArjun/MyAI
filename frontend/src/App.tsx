@@ -1,5 +1,8 @@
 import { Routes, Route } from "react-router-dom";
 
+import NoteDetail from "./pages/NoteDetail";
+import ArticleDetail from "./pages/ArticleDetail";
+
 import Sidebar from "./components/Sidebar";
 import Navbar from "./components/Navbar";
 import AIChatWidget from "./components/AIChatWidget";
@@ -23,6 +26,10 @@ function App() {
             <Route path="/news" element={<News />} />
             <Route path="/notes" element={<Notes />} />
             <Route path="/trends" element={<Trends />} />
+
+            <Route path="/notes/:id" element={<NoteDetail />} />
+            <Route path="/articles/:id" element={<ArticleDetail />} />
+
           </Routes>
         </main>
       </div>

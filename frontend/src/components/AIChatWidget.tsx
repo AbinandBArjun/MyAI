@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
 interface Source {
@@ -15,12 +16,24 @@ interface Message {
 }
 
 export default function AIChatWidget() {
+  const navigate = useNavigate();
+
   const [isOpen, setIsOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  const openSource = (source: Source) => {
+    if (source.type === "NOTE") {
+      navigate("/notes");
+    } else if (source.type === "ARTICLE") {
+      navigate("/news");
+    }
+
+    setIsOpen(false);
+  };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({
@@ -65,19 +78,20 @@ export default function AIChatWidget() {
 
       let errorMessage =
         "Something went wrong while processing your request.";
-      
+
       if (axios.isAxiosError(error)) {
         if (!error.response) {
           errorMessage =
             "I couldn't connect to MyAI. Please make sure the backend is running.";
-          } else if (error.response.status >= 500) {
-            errorMessage =
-              "MyAI encountered a server error while processing your request. Please try again.";
-          } else if (error.response.status >= 400) {
-            errorMessage =
-              "MyAI couldn't process that request. Please check your message and try again.";
-          }
+        } else if (error.response.status >= 500) {
+          errorMessage =
+            "MyAI encountered a server error while processing your request. Please try again.";
+        } else if (error.response.status >= 400) {
+          errorMessage =
+            "MyAI couldn't process that request. Please check your message and try again.";
+        }
       }
+
       setMessages((previous) => [
         ...previous,
         {
@@ -180,6 +194,7 @@ export default function AIChatWidget() {
                     {item.content}
                   </div>
 
+                  {/* Sources */}
                   {item.role === "assistant" &&
                     item.sources &&
                     item.sources.length > 0 && (
@@ -190,20 +205,26 @@ export default function AIChatWidget() {
 
                         <div className="space-y-1.5">
                           {item.sources.map((source) => (
-                            <div
+                            <button
                               key={`${source.type}-${source.id}`}
-                              className="rounded-lg bg-slate-900/70 px-2.5 py-2"
+                              type="button"
+                              onClick={() => openSource(source)}
+                              className="w-full rounded-lg bg-slate-900/70 px-2.5 py-2 text-left transition hover:bg-slate-700/70"
                             >
                               <div className="flex items-center gap-2">
-                                <span className="text-[10px] font-semibold text-blue-400">
+                                <span className="shrink-0 text-[10px] font-semibold text-blue-400">
                                   {source.type}
                                 </span>
 
                                 <span className="truncate text-xs text-slate-300">
                                   {source.title}
                                 </span>
+
+                                <span className="ml-auto shrink-0 text-xs text-slate-500">
+                                  →
+                                </span>
                               </div>
-                            </div>
+                            </button>
                           ))}
                         </div>
                       </div>
@@ -212,6 +233,7 @@ export default function AIChatWidget() {
               </div>
             ))}
 
+            {/* Loading Indicator */}
             {loading && (
               <div className="flex justify-start">
                 <div className="flex items-center gap-1 rounded-2xl rounded-bl-sm bg-slate-800 px-4 py-3">

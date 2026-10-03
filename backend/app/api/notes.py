@@ -14,8 +14,33 @@ router = APIRouter()
 
 @router.get("/")
 def get_notes(db: Session = Depends(get_db)):
-    notes = db.query(Note).all()
+    notes = (
+        db.query(Note)
+        .order_by(Note.id.desc())
+        .all()
+    )
+
     return notes
+
+
+@router.get("/{note_id}")
+def get_note(
+    note_id: int,
+    db: Session = Depends(get_db)
+):
+    note = (
+        db.query(Note)
+        .filter(Note.id == note_id)
+        .first()
+    )
+
+    if not note:
+        raise HTTPException(
+            status_code=404,
+            detail="Note not found"
+        )
+
+    return note
 
 
 @router.post("/")
@@ -32,7 +57,6 @@ def create_note(
     db.commit()
     db.refresh(new_note)
 
-    # Generate and store the note embedding
     text = f"{new_note.title}\n{new_note.content}"
 
     save_embedding(
@@ -51,9 +75,11 @@ def update_note(
     updated_note: NoteCreate,
     db: Session = Depends(get_db)
 ):
-    note = db.query(Note).filter(
-        Note.id == note_id
-    ).first()
+    note = (
+        db.query(Note)
+        .filter(Note.id == note_id)
+        .first()
+    )
 
     if not note:
         raise HTTPException(
@@ -67,7 +93,6 @@ def update_note(
     db.commit()
     db.refresh(note)
 
-    # Regenerate the embedding after updating the note
     text = f"{note.title}\n{note.content}"
 
     save_embedding(
@@ -85,9 +110,11 @@ def delete_note(
     note_id: int,
     db: Session = Depends(get_db)
 ):
-    note = db.query(Note).filter(
-        Note.id == note_id
-    ).first()
+    note = (
+        db.query(Note)
+        .filter(Note.id == note_id)
+        .first()
+    )
 
     if not note:
         raise HTTPException(
