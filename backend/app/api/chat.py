@@ -1,19 +1,20 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
-from typing import Optional, Literal
+from typing import Optional
 
 from app.services.chat_service import ask_llm
-from app.rag.retriever import _retrieve_documents
+from app.rag.retriever import (
+    _retrieve_documents,
+    _get_document,
+)
 from app.database.database import SessionLocal
-from app.models.note import Note
-from app.models.article import Article
 
 
 router = APIRouter()
 
 
 class ChatContext(BaseModel):
-    type: Literal["NOTE", "ARTICLE"]
+    type: str
     id: int
 
 
@@ -22,113 +23,102 @@ class ChatRequest(BaseModel):
     context: Optional[ChatContext] = None
 
 
-def get_context_document(
-    context: ChatContext,
-    db
-):
-    if context.type == "NOTE":
-        return (
-            db.query(Note)
-            .filter(Note.id == context.id)
-            .first()
-        )
-
-    if context.type == "ARTICLE":
-        return (
-            db.query(Article)
-            .filter(Article.id == context.id)
-            .first()
-        )
-
-    return None
-
-
 @router.post("/")
 def chat(request: ChatRequest):
 
     db = SessionLocal()
 
     try:
-
-        # --------------------------------------------------
+        # ---------------------------------------------------------
         # CONTEXT-AWARE RETRIEVAL
-        # --------------------------------------------------
+        # ---------------------------------------------------------
+        #
+        # If the frontend provides a specific Note or Article,
+        # retrieve that document directly.
+        #
+        # Otherwise, perform normal semantic RAG retrieval.
+        # ---------------------------------------------------------
 
         if request.context:
 
-            document = get_context_document(
-                request.context,
-                db
+            document = _get_document(
+                db=db,
+                document_type=request.context.type,
+                document_id=request.context.id,
             )
 
-            if not document:
-                return {
-                    "response": (
-                        "I couldn't find the document "
-                        "you're currently viewing."
-                    ),
-                    "sources": [],
-                }
+            if document is not None:
 
-            if request.context.type == "NOTE":
-                content = document.content
+                if request.context.type == "NOTE":
+                    content = document.content
+                else:
+                    content = document.summary
+
+                documents = [
+                    {
+                        "type": request.context.type,
+                        "id": document.id,
+                        "title": document.title,
+                        "content": content,
+                    }
+                ]
+
             else:
-                content = document.summary
-
-            context = (
-                f"{request.context.type}: "
-                f"{document.title}\n"
-                f"{content}"
-            )
-
-            sources = [
-                {
-                    "type": request.context.type,
-                    "id": document.id,
-                    "title": document.title,
-                }
-            ]
-
-        # --------------------------------------------------
-        # NORMAL RAG RETRIEVAL
-        # --------------------------------------------------
+                # If the requested context no longer exists,
+                # fall back to normal RAG retrieval.
+                documents = _retrieve_documents(
+                    request.message,
+                    db
+                )
 
         else:
+            # -----------------------------------------------------
+            # NORMAL GLOBAL RAG
+            # -----------------------------------------------------
 
             documents = _retrieve_documents(
                 request.message,
                 db
             )
 
-            context_parts = []
+        # ---------------------------------------------------------
+        # BUILD LLM CONTEXT
+        # ---------------------------------------------------------
 
-            for document in documents:
-                context_parts.append(
-                    f"{document['type']}: "
-                    f"{document['title']}\n"
-                    f"{document['content']}"
-                )
+        context_parts = []
 
-            context = "\n\n".join(context_parts)
+        for document in documents:
+            context_parts.append(
+                f"{document['type']}: "
+                f"{document['title']}\n"
+                f"{document['content']}"
+            )
 
-            sources = []
+        context = "\n\n".join(context_parts)
 
-            for document in documents:
+        # ---------------------------------------------------------
+        # BUILD SOURCE METADATA
+        # ---------------------------------------------------------
 
-                source = {
-                    "type": document["type"],
-                    "id": document["id"],
-                    "title": document["title"],
-                }
+        sources = []
 
-                if "score" in document:
-                    source["score"] = document["score"]
+        for document in documents:
 
-                sources.append(source)
+            source = {
+                "type": document["type"],
+                "id": document["id"],
+                "title": document["title"],
+            }
 
-        # --------------------------------------------------
-        # GENERATE RESPONSE
-        # --------------------------------------------------
+            # Semantic retrieval provides similarity scores.
+            if "score" in document:
+                source["score"] = document["score"]
+
+            sources.append(source)
+
+        # ---------------------------------------------------------
+        # GENERATE ANSWER
+        # ---------------------------------------------------------
 
         response = ask_llm(
             request.message,

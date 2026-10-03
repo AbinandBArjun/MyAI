@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import { Routes, Route, useLocation } from "react-router-dom";
 
 import Sidebar from "./components/Sidebar";
@@ -10,33 +9,34 @@ import News from "./pages/News";
 import Notes from "./pages/Notes";
 import Trends from "./pages/Trends";
 import Chat from "./pages/Chat";
-import NoteDetail from "./pages/NoteDetail";
 import ArticleDetail from "./pages/ArticleDetail";
+import NoteDetail from "./pages/NoteDetail";
 
-function App() {
+interface ChatContext {
+  type: "NOTE" | "ARTICLE";
+  id: number;
+  title?: string;
+}
+
+function AppContent() {
   const location = useLocation();
 
-  const chatContext = useMemo(() => {
-    const noteMatch = location.pathname.match(/^\/notes\/(\d+)$/);
+  let context: ChatContext | undefined;
 
-    if (noteMatch) {
-      return {
-        type: "NOTE" as const,
-        id: Number(noteMatch[1]),
-      };
-    }
+  const noteMatch = location.pathname.match(/^\/notes\/(\d+)$/);
+  const articleMatch = location.pathname.match(/^\/news\/(\d+)$/);
 
-    const articleMatch = location.pathname.match(/^\/news\/(\d+)$/);
-
-    if (articleMatch) {
-      return {
-        type: "ARTICLE" as const,
-        id: Number(articleMatch[1]),
-      };
-    }
-
-    return undefined;
-  }, [location.pathname]);
+  if (noteMatch) {
+    context = {
+      type: "NOTE",
+      id: Number(noteMatch[1]),
+    };
+  } else if (articleMatch) {
+    context = {
+      type: "ARTICLE",
+      id: Number(articleMatch[1]),
+    };
+  }
 
   return (
     <div className="flex min-h-screen bg-slate-950 text-white">
@@ -56,15 +56,16 @@ function App() {
             <Route path="/notes/:id" element={<NoteDetail />} />
 
             <Route path="/chat" element={<Chat />} />
-
             <Route path="/trends" element={<Trends />} />
           </Routes>
         </main>
       </div>
 
-      <AIChatWidget context={chatContext} />
+      <AIChatWidget context={context} />
     </div>
   );
 }
 
-export default App;
+export default function App() {
+  return <AppContent />;
+}
