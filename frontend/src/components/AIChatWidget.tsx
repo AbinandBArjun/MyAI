@@ -25,6 +25,8 @@ interface AIChatWidgetProps {
   context?: AIChatContext;
 }
 
+type ContextMode = "AUTO" | "NOTE" | "ARTICLE" | "GLOBAL";
+
 export default function AIChatWidget({
   context,
 }: AIChatWidgetProps) {
@@ -35,8 +37,29 @@ export default function AIChatWidget({
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
 
+  /*
+   * AUTO:
+   * Use the current page's context automatically.
+   *
+   * GLOBAL:
+   * Search the entire knowledge base.
+   *
+   * NOTE / ARTICLE:
+   * Explicitly use the current document context.
+   */
+  const [contextMode, setContextMode] =
+    useState<ContextMode>("AUTO");
+
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+
+  /*
+   * When the user navigates to another note/article,
+   * return to automatic context for the new page.
+   */
+  useEffect(() => {
+    setContextMode("AUTO");
+  }, [context?.type, context?.id]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({
@@ -51,6 +74,47 @@ export default function AIChatWidget({
       }, 100);
     }
   }, [isOpen]);
+
+  /*
+   * Determine the actual context that will be sent
+   * to the backend.
+   */
+  const activeContext =
+    contextMode === "GLOBAL"
+      ? undefined
+      : contextMode === "NOTE" || contextMode === "ARTICLE"
+      ? context
+      : context;
+
+  const isUsingSpecificContext =
+    activeContext !== undefined;
+
+  const getContextLabel = () => {
+    if (contextMode === "GLOBAL") {
+      return "Entire Knowledge Base";
+    }
+
+    if (activeContext) {
+      return (
+        activeContext.title ||
+        `${activeContext.type} #${activeContext.id}`
+      );
+    }
+
+    return "Entire Knowledge Base";
+  };
+
+  const getContextTypeLabel = () => {
+    if (contextMode === "GLOBAL") {
+      return "GLOBAL";
+    }
+
+    if (activeContext) {
+      return activeContext.type;
+    }
+
+    return "GLOBAL";
+  };
 
   const sendMessage = async () => {
     const trimmedMessage = input.trim();
@@ -77,11 +141,19 @@ export default function AIChatWidget({
         "http://localhost:8000/chat/",
         {
           message: trimmedMessage,
-          ...(context
+
+          /*
+           * Only send document context when the user
+           * has selected a specific document.
+           *
+           * GLOBAL sends no context object, so the
+           * backend performs normal semantic RAG.
+           */
+          ...(isUsingSpecificContext && activeContext
             ? {
                 context: {
-                  type: context.type,
-                  id: context.id,
+                  type: activeContext.type,
+                  id: activeContext.id,
                 },
               }
             : {}),
@@ -140,6 +212,14 @@ export default function AIChatWidget({
     setMessages([]);
   };
 
+  const handleContextChange = (
+    event: React.ChangeEvent<HTMLSelectElement>
+  ) => {
+    setContextMode(
+      event.target.value as ContextMode
+    );
+  };
+
   return (
     <>
       {/* Floating Button */}
@@ -157,15 +237,19 @@ export default function AIChatWidget({
       {/* Chat Window */}
       {isOpen && (
         <div className="fixed bottom-6 right-6 z-50 flex h-[650px] w-[390px] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border border-slate-700 bg-slate-950 shadow-2xl shadow-black/40">
+
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-slate-800 bg-slate-900 px-4 py-3">
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600/20 text-blue-400">
+          <div className="border-b border-slate-800 bg-slate-900 px-4 py-3">
+
+            <div className="flex items-center justify-between">
+
+              <div className="flex min-w-0 items-center gap-2">
+
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-600/20 text-blue-400">
                   ✦
                 </div>
 
-                <div>
+                <div className="min-w-0">
                   <h2 className="text-sm font-semibold text-white">
                     Mypedia AI
                   </h2>
@@ -174,54 +258,92 @@ export default function AIChatWidget({
                     Knowledge assistant
                   </p>
                 </div>
+
               </div>
 
-              {/* Active Context */}
-              {context && (
-                <div className="mt-2 flex items-center gap-2">
-                  <span className="rounded-full bg-blue-500/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-blue-400">
-                    {context.type}
-                  </span>
+              <div className="flex items-center gap-1">
 
-                  <span
-                    className="max-w-[220px] truncate text-[11px] text-slate-400"
-                    title={context.title}
+                {messages.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={clearChat}
+                    className="rounded-lg px-2 py-1.5 text-xs text-slate-500 transition hover:bg-slate-800 hover:text-slate-300"
+                    title="Clear chat"
                   >
-                    {context.title ||
-                      `${context.type} #${context.id}`}
-                  </span>
-                </div>
-              )}
-            </div>
+                    Clear
+                  </button>
+                )}
 
-            <div className="flex items-center gap-1">
-              {messages.length > 0 && (
                 <button
                   type="button"
-                  onClick={clearChat}
-                  className="rounded-lg px-2 py-1.5 text-xs text-slate-500 transition hover:bg-slate-800 hover:text-slate-300"
-                  title="Clear chat"
+                  onClick={() => setIsOpen(false)}
+                  className="rounded-lg px-2 py-1 text-lg text-slate-500 transition hover:bg-slate-800 hover:text-white"
+                  aria-label="Close AI assistant"
                 >
-                  Clear
+                  ×
                 </button>
-              )}
 
-              <button
-                type="button"
-                onClick={() => setIsOpen(false)}
-                className="rounded-lg px-2 py-1 text-lg text-slate-500 transition hover:bg-slate-800 hover:text-white"
-                aria-label="Close AI assistant"
+              </div>
+            </div>
+
+            {/* Context Selector */}
+            <div className="mt-3">
+
+              <div className="mb-1.5 flex items-center justify-between">
+                <label
+                  htmlFor="ai-context"
+                  className="text-[10px] font-semibold uppercase tracking-wide text-slate-500"
+                >
+                  Context
+                </label>
+
+                <span className="text-[10px] text-slate-600">
+                  {getContextTypeLabel()}
+                </span>
+              </div>
+
+              <select
+                id="ai-context"
+                value={contextMode}
+                onChange={handleContextChange}
+                className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-slate-300 outline-none transition focus:border-blue-500"
               >
-                ×
-              </button>
+                <option value="AUTO">
+                  Current Page
+                </option>
+
+                {context?.type === "NOTE" && (
+                  <option value="NOTE">
+                    Current Note
+                  </option>
+                )}
+
+                {context?.type === "ARTICLE" && (
+                  <option value="ARTICLE">
+                    Current Article
+                  </option>
+                )}
+
+                <option value="GLOBAL">
+                  Entire Knowledge Base
+                </option>
+              </select>
+
+              <div className="mt-1.5 truncate text-[10px] text-slate-600">
+                {getContextLabel()}
+              </div>
+
             </div>
           </div>
 
           {/* Messages */}
           <div className="flex-1 overflow-y-auto px-4 py-4">
+
             {messages.length === 0 && (
               <div className="flex h-full items-center justify-center">
+
                 <div className="max-w-[290px] text-center">
+
                   <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-500/10 text-2xl text-blue-400">
                     ✦
                   </div>
@@ -231,28 +353,30 @@ export default function AIChatWidget({
                   </h3>
 
                   <p className="mt-2 text-xs leading-5 text-slate-500">
-                    Ask questions about your notes, articles, or
-                    knowledge base. Relevant sources will be shown
+                    Ask questions about your notes,
+                    articles, or knowledge base.
+                    Relevant sources will be shown
                     with each answer.
                   </p>
 
-                  {context && (
-                    <div className="mt-4 rounded-xl border border-blue-500/20 bg-blue-500/5 px-3 py-2.5 text-left">
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-blue-400">
-                        Current Context
-                      </p>
+                  <div className="mt-4 rounded-xl border border-blue-500/20 bg-blue-500/5 px-3 py-2.5 text-left">
 
-                      <p className="mt-1 truncate text-xs text-slate-300">
-                        {context.title ||
-                          `${context.type} #${context.id}`}
-                      </p>
-                    </div>
-                  )}
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-blue-400">
+                      Current Context
+                    </p>
+
+                    <p className="mt-1 truncate text-xs text-slate-300">
+                      {getContextLabel()}
+                    </p>
+
+                  </div>
+
                 </div>
               </div>
             )}
 
             <div className="space-y-4">
+
               {messages.map((item, index) => (
                 <div
                   key={`${item.role}-${index}`}
@@ -262,6 +386,7 @@ export default function AIChatWidget({
                       : "justify-start"
                   }`}
                 >
+
                   <div
                     className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-6 ${
                       item.role === "user"
@@ -269,6 +394,7 @@ export default function AIChatWidget({
                         : "rounded-bl-sm bg-slate-800 text-gray-200"
                     }`}
                   >
+
                     <div className="whitespace-pre-wrap">
                       {item.content}
                     </div>
@@ -278,11 +404,13 @@ export default function AIChatWidget({
                       item.sources &&
                       item.sources.length > 0 && (
                         <div className="mt-3 border-t border-slate-700 pt-3">
+
                           <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
                             Sources
                           </p>
 
                           <div className="space-y-1.5">
+
                             {item.sources.map((source) => (
                               <button
                                 key={`${source.type}-${source.id}`}
@@ -290,7 +418,9 @@ export default function AIChatWidget({
                                 onClick={() => openSource(source)}
                                 className="w-full rounded-lg bg-slate-900/70 px-2.5 py-2 text-left transition hover:bg-slate-700/80"
                               >
+
                                 <div className="flex items-center gap-2">
+
                                   <span className="shrink-0 text-[10px] font-semibold text-blue-400">
                                     {source.type}
                                   </span>
@@ -305,6 +435,7 @@ export default function AIChatWidget({
                                   <span className="ml-auto shrink-0 text-xs text-slate-500">
                                     →
                                   </span>
+
                                 </div>
 
                                 {typeof source.score === "number" && (
@@ -316,11 +447,14 @@ export default function AIChatWidget({
                                     %
                                   </div>
                                 )}
+
                               </button>
                             ))}
+
                           </div>
                         </div>
                       )}
+
                   </div>
                 </div>
               ))}
@@ -328,29 +462,43 @@ export default function AIChatWidget({
               {/* Loading Indicator */}
               {loading && (
                 <div className="flex justify-start">
+
                   <div className="rounded-2xl rounded-bl-sm bg-slate-800 px-4 py-3">
+
                     <div className="flex items-center gap-1.5">
+
                       <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-500" />
+
                       <span
                         className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-500"
-                        style={{ animationDelay: "120ms" }}
+                        style={{
+                          animationDelay: "120ms",
+                        }}
                       />
+
                       <span
                         className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-500"
-                        style={{ animationDelay: "240ms" }}
+                        style={{
+                          animationDelay: "240ms",
+                        }}
                       />
+
                     </div>
+
                   </div>
                 </div>
               )}
 
               <div ref={messagesEndRef} />
+
             </div>
           </div>
 
           {/* Input */}
           <div className="border-t border-slate-800 bg-slate-900 p-3">
+
             <div className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 focus-within:border-blue-500">
+
               <input
                 ref={inputRef}
                 type="text"
@@ -361,8 +509,10 @@ export default function AIChatWidget({
                 onKeyDown={handleKeyDown}
                 disabled={loading}
                 placeholder={
-                  context
-                    ? `Ask about this ${context.type.toLowerCase()}...`
+                  contextMode === "GLOBAL"
+                    ? "Ask Mypedia AI..."
+                    : activeContext
+                    ? `Ask about this ${activeContext.type.toLowerCase()}...`
                     : "Ask Mypedia AI..."
                 }
                 className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
@@ -371,17 +521,21 @@ export default function AIChatWidget({
               <button
                 type="button"
                 onClick={sendMessage}
-                disabled={loading || !input.trim()}
+                disabled={
+                  loading || !input.trim()
+                }
                 className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-30"
                 aria-label="Send message"
               >
                 ↑
               </button>
+
             </div>
 
             <p className="mt-2 text-center text-[10px] text-slate-600">
               Press Enter to send
             </p>
+
           </div>
         </div>
       )}
