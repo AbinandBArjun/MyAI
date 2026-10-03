@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
 interface Source {
@@ -8,16 +9,16 @@ interface Source {
   score?: number;
 }
 
-interface AIChatContext {
-  type: "NOTE" | "ARTICLE";
-  id: number;
-  title?: string;
-}
-
 interface Message {
   role: "user" | "assistant";
   content: string;
   sources?: Source[];
+}
+
+interface AIChatContext {
+  type: "NOTE" | "ARTICLE";
+  id: number;
+  title?: string;
 }
 
 interface AIChatWidgetProps {
@@ -27,12 +28,15 @@ interface AIChatWidgetProps {
 export default function AIChatWidget({
   context,
 }: AIChatWidgetProps) {
+  const navigate = useNavigate();
+
   const [isOpen, setIsOpen] = useState(false);
-  const [message, setMessage] = useState("");
+  const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({
@@ -40,8 +44,16 @@ export default function AIChatWidget({
     });
   }, [messages, loading]);
 
+  useEffect(() => {
+    if (isOpen) {
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 100);
+    }
+  }, [isOpen]);
+
   const sendMessage = async () => {
-    const trimmedMessage = message.trim();
+    const trimmedMessage = input.trim();
 
     if (!trimmedMessage || loading) {
       return;
@@ -57,7 +69,7 @@ export default function AIChatWidget({
       userMessage,
     ]);
 
-    setMessage("");
+    setInput("");
     setLoading(true);
 
     try {
@@ -65,12 +77,14 @@ export default function AIChatWidget({
         "http://localhost:8000/chat/",
         {
           message: trimmedMessage,
-          context: context
+          ...(context
             ? {
-                type: context.type,
-                id: context.id,
+                context: {
+                  type: context.type,
+                  id: context.id,
+                },
               }
-            : undefined,
+            : {}),
         }
       );
 
@@ -85,111 +99,118 @@ export default function AIChatWidget({
         assistantMessage,
       ]);
     } catch (error) {
-      console.error(
-        "Failed to send message:",
-        error
-      );
+      console.error("Chat request failed:", error);
 
-      let errorMessage =
-        "Something went wrong while processing your request.";
-
-      if (axios.isAxiosError(error)) {
-        if (!error.response) {
-          errorMessage =
-            "I couldn't connect to MyAI. Please make sure the backend is running.";
-        } else if (error.response.status >= 500) {
-          errorMessage =
-            "MyAI encountered a server error while processing your request. Please try again.";
-        } else if (error.response.status >= 400) {
-          errorMessage =
-            "MyAI couldn't process that request. Please check your message and try again.";
-        }
-      }
+      const errorMessage: Message = {
+        role: "assistant",
+        content:
+          "Sorry, I couldn't process your request. Please make sure the backend server is running and try again.",
+        sources: [],
+      };
 
       setMessages((previous) => [
         ...previous,
-        {
-          role: "assistant",
-          content: errorMessage,
-        },
+        errorMessage,
       ]);
     } finally {
       setLoading(false);
     }
   };
 
-  const clearConversation = () => {
-    if (loading) {
-      return;
+  const handleKeyDown = (
+    event: React.KeyboardEvent<HTMLInputElement>
+  ) => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      sendMessage();
     }
-
-    setMessages([]);
   };
 
-  const contextLabel = context
-    ? context.type === "NOTE"
-      ? "Note"
-      : "Article"
-    : null;
+  const openSource = (source: Source) => {
+    if (source.type === "NOTE") {
+      navigate(`/notes/${source.id}`);
+    } else {
+      navigate(`/news/${source.id}`);
+    }
+
+    setIsOpen(false);
+  };
+
+  const clearChat = () => {
+    setMessages([]);
+  };
 
   return (
     <>
       {/* Floating Button */}
-      <button
-        onClick={() =>
-          setIsOpen((previous) => !previous)
-        }
-        className="fixed bottom-4 right-4 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-2xl shadow-lg transition hover:bg-blue-500 sm:bottom-6 sm:right-6"
-        aria-label="Toggle AI assistant"
-      >
-        {isOpen ? "×" : "✦"}
-      </button>
+      {!isOpen && (
+        <button
+          type="button"
+          onClick={() => setIsOpen(true)}
+          className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg shadow-blue-900/30 transition hover:scale-105 hover:bg-blue-500"
+          aria-label="Open AI assistant"
+        >
+          <span className="text-xl">✦</span>
+        </button>
+      )}
 
-      {/* Chat Panel */}
+      {/* Chat Window */}
       {isOpen && (
-        <div className="fixed bottom-24 right-4 z-50 flex h-[min(520px,calc(100vh-7rem))] w-[calc(100vw-2rem)] max-w-[360px] flex-col overflow-hidden rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl sm:right-6">
-
+        <div className="fixed bottom-6 right-6 z-50 flex h-[650px] w-[390px] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border border-slate-700 bg-slate-950 shadow-2xl shadow-black/40">
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-slate-700 bg-slate-800 px-4 py-4">
-
+          <div className="flex items-center justify-between border-b border-slate-800 bg-slate-900 px-4 py-3">
             <div className="min-w-0">
-              <h2 className="font-semibold text-white">
-                MyAI
-              </h2>
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600/20 text-blue-400">
+                  ✦
+                </div>
 
-              {context ? (
-                <p
-                  className="mt-1 truncate text-xs text-blue-400"
-                  title={context.title}
-                >
-                  {contextLabel}:{" "}
-                  {context.title ||
-                    `#${context.id}`}
-                </p>
-              ) : (
-                <p className="mt-1 text-xs text-gray-400">
-                  Your personal knowledge assistant
-                </p>
+                <div>
+                  <h2 className="text-sm font-semibold text-white">
+                    Mypedia AI
+                  </h2>
+
+                  <p className="text-[11px] text-slate-500">
+                    Knowledge assistant
+                  </p>
+                </div>
+              </div>
+
+              {/* Active Context */}
+              {context && (
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="rounded-full bg-blue-500/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-blue-400">
+                    {context.type}
+                  </span>
+
+                  <span
+                    className="max-w-[220px] truncate text-[11px] text-slate-400"
+                    title={context.title}
+                  >
+                    {context.title ||
+                      `${context.type} #${context.id}`}
+                  </span>
+                </div>
               )}
             </div>
 
-            <div className="flex items-center gap-3">
-              <button
-                onClick={clearConversation}
-                disabled={
-                  loading ||
-                  messages.length === 0
-                }
-                className="text-xs text-gray-400 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
-                aria-label="Clear conversation"
-              >
-                Clear
-              </button>
+            <div className="flex items-center gap-1">
+              {messages.length > 0 && (
+                <button
+                  type="button"
+                  onClick={clearChat}
+                  className="rounded-lg px-2 py-1.5 text-xs text-slate-500 transition hover:bg-slate-800 hover:text-slate-300"
+                  title="Clear chat"
+                >
+                  Clear
+                </button>
+              )}
 
               <button
+                type="button"
                 onClick={() => setIsOpen(false)}
-                className="text-xl text-gray-400 transition hover:text-white"
-                aria-label="Close chat"
+                className="rounded-lg px-2 py-1 text-lg text-slate-500 transition hover:bg-slate-800 hover:text-white"
+                aria-label="Close AI assistant"
               >
                 ×
               </button>
@@ -197,70 +218,80 @@ export default function AIChatWidget({
           </div>
 
           {/* Messages */}
-          <div className="flex-1 space-y-4 overflow-y-auto p-4">
-
+          <div className="flex-1 overflow-y-auto px-4 py-4">
             {messages.length === 0 && (
-              <div className="mt-12 text-center">
+              <div className="flex h-full items-center justify-center">
+                <div className="max-w-[290px] text-center">
+                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-500/10 text-2xl text-blue-400">
+                    ✦
+                  </div>
 
-                <div className="text-3xl text-blue-400">
-                  ✦
+                  <h3 className="mt-4 text-sm font-semibold text-white">
+                    Ask Mypedia AI
+                  </h3>
+
+                  <p className="mt-2 text-xs leading-5 text-slate-500">
+                    Ask questions about your notes, articles, or
+                    knowledge base. Relevant sources will be shown
+                    with each answer.
+                  </p>
+
+                  {context && (
+                    <div className="mt-4 rounded-xl border border-blue-500/20 bg-blue-500/5 px-3 py-2.5 text-left">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-blue-400">
+                        Current Context
+                      </p>
+
+                      <p className="mt-1 truncate text-xs text-slate-300">
+                        {context.title ||
+                          `${context.type} #${context.id}`}
+                      </p>
+                    </div>
+                  )}
                 </div>
-
-                <h3 className="mt-3 font-medium text-white">
-                  {context
-                    ? `Ask about this ${contextLabel?.toLowerCase()}`
-                    : "How can I help?"}
-                </h3>
-
-                <p className="mt-2 text-sm text-gray-400">
-                  {context
-                    ? "Ask questions about the current document."
-                    : "Ask questions about your notes and saved articles."}
-                </p>
               </div>
             )}
 
-            {messages.map((item, index) => (
-              <div
-                key={`${item.role}-${index}`}
-                className={`flex ${
-                  item.role === "user"
-                    ? "justify-end"
-                    : "justify-start"
-                }`}
-              >
+            <div className="space-y-4">
+              {messages.map((item, index) => (
                 <div
-                  className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-6 ${
+                  key={`${item.role}-${index}`}
+                  className={`flex ${
                     item.role === "user"
-                      ? "whitespace-pre-wrap rounded-br-sm bg-blue-600 text-white"
-                      : "rounded-bl-sm bg-slate-800 text-gray-200"
+                      ? "justify-end"
+                      : "justify-start"
                   }`}
                 >
+                  <div
+                    className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-6 ${
+                      item.role === "user"
+                        ? "rounded-br-sm bg-blue-600 text-white"
+                        : "rounded-bl-sm bg-slate-800 text-gray-200"
+                    }`}
+                  >
+                    <div className="whitespace-pre-wrap">
+                      {item.content}
+                    </div>
 
-                  <div className="whitespace-pre-wrap">
-                    {item.content}
-                  </div>
+                    {/* Sources */}
+                    {item.role === "assistant" &&
+                      item.sources &&
+                      item.sources.length > 0 && (
+                        <div className="mt-3 border-t border-slate-700 pt-3">
+                          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                            Sources
+                          </p>
 
-                  {/* Sources */}
-                  {item.role === "assistant" &&
-                    item.sources &&
-                    item.sources.length > 0 && (
-                      <div className="mt-3 border-t border-slate-700 pt-3">
-
-                        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                          Sources
-                        </p>
-
-                        <div className="space-y-1.5">
-                          {item.sources.map(
-                            (source) => (
-                              <div
+                          <div className="space-y-1.5">
+                            {item.sources.map((source) => (
+                              <button
                                 key={`${source.type}-${source.id}`}
-                                className="rounded-lg bg-slate-900/70 px-2.5 py-2"
+                                type="button"
+                                onClick={() => openSource(source)}
+                                className="w-full rounded-lg bg-slate-900/70 px-2.5 py-2 text-left transition hover:bg-slate-700/80"
                               >
                                 <div className="flex items-center gap-2">
-
-                                  <span className="text-[10px] font-semibold text-blue-400">
+                                  <span className="shrink-0 text-[10px] font-semibold text-blue-400">
                                     {source.type}
                                   </span>
 
@@ -271,81 +302,86 @@ export default function AIChatWidget({
                                     {source.title}
                                   </span>
 
+                                  <span className="ml-auto shrink-0 text-xs text-slate-500">
+                                    →
+                                  </span>
                                 </div>
-                              </div>
-                            )
-                          )}
+
+                                {typeof source.score === "number" && (
+                                  <div className="mt-1 text-[10px] text-slate-600">
+                                    Relevance:{" "}
+                                    {(
+                                      source.score * 100
+                                    ).toFixed(1)}
+                                    %
+                                  </div>
+                                )}
+                              </button>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    )}
-
+                      )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
 
-            {/* Loading */}
-            {loading && (
-              <div className="flex justify-start">
-                <div className="flex items-center gap-1 rounded-2xl rounded-bl-sm bg-slate-800 px-4 py-3">
-
-                  <span className="h-2 w-2 animate-bounce rounded-full bg-blue-400 [animation-delay:-0.3s]" />
-
-                  <span className="h-2 w-2 animate-bounce rounded-full bg-blue-400 [animation-delay:-0.15s]" />
-
-                  <span className="h-2 w-2 animate-bounce rounded-full bg-blue-400" />
-
+              {/* Loading Indicator */}
+              {loading && (
+                <div className="flex justify-start">
+                  <div className="rounded-2xl rounded-bl-sm bg-slate-800 px-4 py-3">
+                    <div className="flex items-center gap-1.5">
+                      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-500" />
+                      <span
+                        className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-500"
+                        style={{ animationDelay: "120ms" }}
+                      />
+                      <span
+                        className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-500"
+                        style={{ animationDelay: "240ms" }}
+                      />
+                    </div>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            <div ref={messagesEndRef} />
+              <div ref={messagesEndRef} />
+            </div>
           </div>
 
           {/* Input */}
-          <div className="border-t border-slate-700 bg-slate-800/80 p-3">
-
-            <div className="flex items-end gap-2">
-
-              <textarea
-                value={message}
+          <div className="border-t border-slate-800 bg-slate-900 p-3">
+            <div className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 focus-within:border-blue-500">
+              <input
+                ref={inputRef}
+                type="text"
+                value={input}
                 onChange={(event) =>
-                  setMessage(event.target.value)
+                  setInput(event.target.value)
                 }
-                onKeyDown={(event) => {
-                  if (
-                    event.key === "Enter" &&
-                    !event.shiftKey
-                  ) {
-                    event.preventDefault();
-                    sendMessage();
-                  }
-                }}
+                onKeyDown={handleKeyDown}
+                disabled={loading}
                 placeholder={
                   context
-                    ? `Ask about this ${contextLabel?.toLowerCase()}...`
-                    : "Ask your knowledge assistant..."
+                    ? `Ask about this ${context.type.toLowerCase()}...`
+                    : "Ask Mypedia AI..."
                 }
-                rows={2}
-                className="min-w-0 flex-1 resize-none rounded-xl border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-white outline-none placeholder:text-slate-600 focus:border-blue-500"
+                className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
               />
 
               <button
+                type="button"
                 onClick={sendMessage}
-                disabled={
-                  loading ||
-                  !message.trim()
-                }
-                className="rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-40"
+                disabled={loading || !input.trim()}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-30"
+                aria-label="Send message"
               >
                 ↑
               </button>
-
             </div>
 
-            <p className="mt-2 text-[11px] text-gray-500">
-              Enter to send · Shift + Enter for a new line
+            <p className="mt-2 text-center text-[10px] text-slate-600">
+              Press Enter to send
             </p>
-
           </div>
         </div>
       )}
