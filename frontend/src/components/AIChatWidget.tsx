@@ -37,36 +37,44 @@ export default function AIChatWidget({
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
 
-  /*
-   * AUTO:
-   * Use the current page's context automatically.
-   *
-   * GLOBAL:
-   * Search the entire knowledge base.
-   *
-   * NOTE / ARTICLE:
-   * Explicitly use the current document context.
-   */
   const [contextMode, setContextMode] =
     useState<ContextMode>("AUTO");
 
-  const messagesEndRef = useRef<HTMLDivElement | null>(null);
-  const inputRef = useRef<HTMLInputElement | null>(null);
+  const messagesEndRef =
+    useRef<HTMLDivElement | null>(null);
+
+  const inputRef =
+    useRef<HTMLInputElement | null>(null);
 
   /*
-   * When the user navigates to another note/article,
-   * return to automatic context for the new page.
+   * When the current page changes:
+   *
+   * Note #12 → Note #15
+   * Note #12 → Article #1
+   * Article #1 → Notes list
+   *
+   * reset the context and conversation so that
+   * messages from the previous document are not
+   * incorrectly associated with the new document.
    */
   useEffect(() => {
     setContextMode("AUTO");
+    setMessages([]);
+    setInput("");
   }, [context?.type, context?.id]);
 
+  /*
+   * Scroll to the newest message.
+   */
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({
       behavior: "smooth",
     });
   }, [messages, loading]);
 
+  /*
+   * Focus the input whenever the widget opens.
+   */
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => {
@@ -76,19 +84,19 @@ export default function AIChatWidget({
   }, [isOpen]);
 
   /*
-   * Determine the actual context that will be sent
-   * to the backend.
+   * Determine which context is actually active.
    */
   const activeContext =
     contextMode === "GLOBAL"
       ? undefined
-      : contextMode === "NOTE" || contextMode === "ARTICLE"
-      ? context
       : context;
 
   const isUsingSpecificContext =
     activeContext !== undefined;
 
+  /*
+   * Human-readable context name.
+   */
   const getContextLabel = () => {
     if (contextMode === "GLOBAL") {
       return "Entire Knowledge Base";
@@ -104,6 +112,9 @@ export default function AIChatWidget({
     return "Entire Knowledge Base";
   };
 
+  /*
+   * Short context type shown in the header.
+   */
   const getContextTypeLabel = () => {
     if (contextMode === "GLOBAL") {
       return "GLOBAL";
@@ -116,6 +127,9 @@ export default function AIChatWidget({
     return "GLOBAL";
   };
 
+  /*
+   * Send a message to the backend.
+   */
   const sendMessage = async () => {
     const trimmedMessage = input.trim();
 
@@ -137,27 +151,29 @@ export default function AIChatWidget({
     setLoading(true);
 
     try {
+      const requestBody = {
+        message: trimmedMessage,
+
+        /*
+         * When a specific note/article is active,
+         * send its type and ID.
+         *
+         * When GLOBAL is selected, no context is
+         * sent and the backend performs normal RAG.
+         */
+        ...(isUsingSpecificContext && activeContext
+          ? {
+              context: {
+                type: activeContext.type,
+                id: activeContext.id,
+              },
+            }
+          : {}),
+      };
+
       const response = await axios.post(
         "http://localhost:8000/chat/",
-        {
-          message: trimmedMessage,
-
-          /*
-           * Only send document context when the user
-           * has selected a specific document.
-           *
-           * GLOBAL sends no context object, so the
-           * backend performs normal semantic RAG.
-           */
-          ...(isUsingSpecificContext && activeContext
-            ? {
-                context: {
-                  type: activeContext.type,
-                  id: activeContext.id,
-                },
-              }
-            : {}),
-        }
+        requestBody
       );
 
       const assistantMessage: Message = {
@@ -171,7 +187,10 @@ export default function AIChatWidget({
         assistantMessage,
       ]);
     } catch (error) {
-      console.error("Chat request failed:", error);
+      console.error(
+        "Chat request failed:",
+        error
+      );
 
       const errorMessage: Message = {
         role: "assistant",
@@ -189,15 +208,24 @@ export default function AIChatWidget({
     }
   };
 
+  /*
+   * Enter sends the message.
+   */
   const handleKeyDown = (
     event: React.KeyboardEvent<HTMLInputElement>
   ) => {
-    if (event.key === "Enter" && !event.shiftKey) {
+    if (
+      event.key === "Enter" &&
+      !event.shiftKey
+    ) {
       event.preventDefault();
       sendMessage();
     }
   };
 
+  /*
+   * Open a source from an AI response.
+   */
   const openSource = (source: Source) => {
     if (source.type === "NOTE") {
       navigate(`/notes/${source.id}`);
@@ -208,16 +236,31 @@ export default function AIChatWidget({
     setIsOpen(false);
   };
 
+  /*
+   * Manually clear the conversation.
+   */
   const clearChat = () => {
     setMessages([]);
+    setInput("");
   };
 
+  /*
+   * Changing context starts a fresh conversation.
+   */
   const handleContextChange = (
     event: React.ChangeEvent<HTMLSelectElement>
   ) => {
-    setContextMode(
-      event.target.value as ContextMode
-    );
+    const newMode =
+      event.target.value as ContextMode;
+
+    setContextMode(newMode);
+
+    /*
+     * Do not carry a conversation from one
+     * context into another.
+     */
+    setMessages([]);
+    setInput("");
   };
 
   return (
@@ -230,7 +273,9 @@ export default function AIChatWidget({
           className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg shadow-blue-900/30 transition hover:scale-105 hover:bg-blue-500"
           aria-label="Open AI assistant"
         >
-          <span className="text-xl">✦</span>
+          <span className="text-xl">
+            ✦
+          </span>
         </button>
       )}
 
@@ -276,7 +321,9 @@ export default function AIChatWidget({
 
                 <button
                   type="button"
-                  onClick={() => setIsOpen(false)}
+                  onClick={() =>
+                    setIsOpen(false)
+                  }
                   className="rounded-lg px-2 py-1 text-lg text-slate-500 transition hover:bg-slate-800 hover:text-white"
                   aria-label="Close AI assistant"
                 >
@@ -284,12 +331,14 @@ export default function AIChatWidget({
                 </button>
 
               </div>
+
             </div>
 
             {/* Context Selector */}
             <div className="mt-3">
 
               <div className="mb-1.5 flex items-center justify-between">
+
                 <label
                   htmlFor="ai-context"
                   className="text-[10px] font-semibold uppercase tracking-wide text-slate-500"
@@ -300,6 +349,7 @@ export default function AIChatWidget({
                 <span className="text-[10px] text-slate-600">
                   {getContextTypeLabel()}
                 </span>
+
               </div>
 
               <select
@@ -308,6 +358,7 @@ export default function AIChatWidget({
                 onChange={handleContextChange}
                 className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-slate-300 outline-none transition focus:border-blue-500"
               >
+
                 <option value="AUTO">
                   Current Page
                 </option>
@@ -327,6 +378,7 @@ export default function AIChatWidget({
                 <option value="GLOBAL">
                   Entire Knowledge Base
                 </option>
+
               </select>
 
               <div className="mt-1.5 truncate text-[10px] text-slate-600">
@@ -334,6 +386,7 @@ export default function AIChatWidget({
               </div>
 
             </div>
+
           </div>
 
           {/* Messages */}
@@ -353,10 +406,10 @@ export default function AIChatWidget({
                   </h3>
 
                   <p className="mt-2 text-xs leading-5 text-slate-500">
-                    Ask questions about your notes,
-                    articles, or knowledge base.
-                    Relevant sources will be shown
-                    with each answer.
+                    Ask questions about your
+                    notes, articles, or knowledge
+                    base. Relevant sources will be
+                    shown with each answer.
                   </p>
 
                   <div className="mt-4 rounded-xl border border-blue-500/20 bg-blue-500/5 px-3 py-2.5 text-left">
@@ -372,92 +425,115 @@ export default function AIChatWidget({
                   </div>
 
                 </div>
+
               </div>
             )}
 
             <div className="space-y-4">
 
-              {messages.map((item, index) => (
-                <div
-                  key={`${item.role}-${index}`}
-                  className={`flex ${
-                    item.role === "user"
-                      ? "justify-end"
-                      : "justify-start"
-                  }`}
-                >
-
+              {messages.map(
+                (item, index) => (
                   <div
-                    className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-6 ${
+                    key={`${item.role}-${index}`}
+                    className={`flex ${
                       item.role === "user"
-                        ? "rounded-br-sm bg-blue-600 text-white"
-                        : "rounded-bl-sm bg-slate-800 text-gray-200"
+                        ? "justify-end"
+                        : "justify-start"
                     }`}
                   >
 
-                    <div className="whitespace-pre-wrap">
-                      {item.content}
-                    </div>
+                    <div
+                      className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-6 ${
+                        item.role === "user"
+                          ? "rounded-br-sm bg-blue-600 text-white"
+                          : "rounded-bl-sm bg-slate-800 text-gray-200"
+                      }`}
+                    >
 
-                    {/* Sources */}
-                    {item.role === "assistant" &&
-                      item.sources &&
-                      item.sources.length > 0 && (
-                        <div className="mt-3 border-t border-slate-700 pt-3">
+                      <div className="whitespace-pre-wrap">
+                        {item.content}
+                      </div>
 
-                          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                            Sources
-                          </p>
+                      {/* Sources */}
+                      {item.role ===
+                        "assistant" &&
+                        item.sources &&
+                        item.sources.length >
+                          0 && (
+                          <div className="mt-3 border-t border-slate-700 pt-3">
 
-                          <div className="space-y-1.5">
+                            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                              Sources
+                            </p>
 
-                            {item.sources.map((source) => (
-                              <button
-                                key={`${source.type}-${source.id}`}
-                                type="button"
-                                onClick={() => openSource(source)}
-                                className="w-full rounded-lg bg-slate-900/70 px-2.5 py-2 text-left transition hover:bg-slate-700/80"
-                              >
+                            <div className="space-y-1.5">
 
-                                <div className="flex items-center gap-2">
-
-                                  <span className="shrink-0 text-[10px] font-semibold text-blue-400">
-                                    {source.type}
-                                  </span>
-
-                                  <span
-                                    className="truncate text-xs text-slate-300"
-                                    title={source.title}
+                              {item.sources.map(
+                                (source) => (
+                                  <button
+                                    key={`${source.type}-${source.id}`}
+                                    type="button"
+                                    onClick={() =>
+                                      openSource(
+                                        source
+                                      )
+                                    }
+                                    className="w-full rounded-lg bg-slate-900/70 px-2.5 py-2 text-left transition hover:bg-slate-700/80"
                                   >
-                                    {source.title}
-                                  </span>
 
-                                  <span className="ml-auto shrink-0 text-xs text-slate-500">
-                                    →
-                                  </span>
+                                    <div className="flex items-center gap-2">
 
-                                </div>
+                                      <span className="shrink-0 text-[10px] font-semibold text-blue-400">
+                                        {
+                                          source.type
+                                        }
+                                      </span>
 
-                                {typeof source.score === "number" && (
-                                  <div className="mt-1 text-[10px] text-slate-600">
-                                    Relevance:{" "}
-                                    {(
-                                      source.score * 100
-                                    ).toFixed(1)}
-                                    %
-                                  </div>
-                                )}
+                                      <span
+                                        className="truncate text-xs text-slate-300"
+                                        title={
+                                          source.title
+                                        }
+                                      >
+                                        {
+                                          source.title
+                                        }
+                                      </span>
 
-                              </button>
-                            ))}
+                                      <span className="ml-auto shrink-0 text-xs text-slate-500">
+                                        →
+                                      </span>
+
+                                    </div>
+
+                                    {typeof source.score ===
+                                      "number" && (
+                                      <div className="mt-1 text-[10px] text-slate-600">
+                                        Relevance:{" "}
+                                        {(
+                                          source.score *
+                                          100
+                                        ).toFixed(
+                                          1
+                                        )}
+                                        %
+                                      </div>
+                                    )}
+
+                                  </button>
+                                )
+                              )}
+
+                            </div>
 
                           </div>
-                        </div>
-                      )}
+                        )}
+
+                    </div>
 
                   </div>
-                </div>
-              ))}
+                )
+              )}
 
               {/* Loading Indicator */}
               {loading && (
@@ -472,26 +548,30 @@ export default function AIChatWidget({
                       <span
                         className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-500"
                         style={{
-                          animationDelay: "120ms",
+                          animationDelay:
+                            "120ms",
                         }}
                       />
 
                       <span
                         className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-500"
                         style={{
-                          animationDelay: "240ms",
+                          animationDelay:
+                            "240ms",
                         }}
                       />
 
                     </div>
 
                   </div>
+
                 </div>
               )}
 
               <div ref={messagesEndRef} />
 
             </div>
+
           </div>
 
           {/* Input */}
@@ -522,7 +602,8 @@ export default function AIChatWidget({
                 type="button"
                 onClick={sendMessage}
                 disabled={
-                  loading || !input.trim()
+                  loading ||
+                  !input.trim()
                 }
                 className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-30"
                 aria-label="Send message"
@@ -537,6 +618,7 @@ export default function AIChatWidget({
             </p>
 
           </div>
+
         </div>
       )}
     </>
