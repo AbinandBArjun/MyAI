@@ -1,6 +1,6 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import Optional
+from typing import Literal, Optional
 
 from app.services.chat_service import ask_llm
 from app.rag.retriever import (
@@ -14,7 +14,7 @@ router = APIRouter()
 
 
 class ChatContext(BaseModel):
-    type: str
+    type: Literal["NOTE", "ARTICLE"]
     id: int
 
 
@@ -34,9 +34,10 @@ def chat(request: ChatRequest):
         # ---------------------------------------------------------
         #
         # If the frontend provides a specific Note or Article,
-        # retrieve that document directly.
+        # retrieve only that document.
         #
-        # Otherwise, perform normal semantic RAG retrieval.
+        # Otherwise, perform normal semantic RAG retrieval
+        # across the knowledge base.
         # ---------------------------------------------------------
 
         if request.context:
@@ -47,38 +48,39 @@ def chat(request: ChatRequest):
                 document_id=request.context.id,
             )
 
-            if document is not None:
-
-                if request.context.type == "NOTE":
-                    content = document.content
-                else:
-                    content = document.summary
-
-                documents = [
-                    {
-                        "type": request.context.type,
-                        "id": document.id,
-                        "title": document.title,
-                        "content": content,
-                    }
-                ]
-
-            else:
-                # If the requested context no longer exists,
-                # fall back to normal RAG retrieval.
-                documents = _retrieve_documents(
-                    request.message,
-                    db
+            if document is None:
+                raise HTTPException(
+                    status_code=404,
+                    detail=(
+                        f"{request.context.type} "
+                        f"with id {request.context.id} "
+                        f"was not found."
+                    ),
                 )
 
+            if request.context.type == "NOTE":
+                content = document.content
+            else:
+                content = document.summary
+
+            documents = [
+                {
+                    "type": request.context.type,
+                    "id": document.id,
+                    "title": document.title,
+                    "content": content,
+                }
+            ]
+
         else:
+
             # -----------------------------------------------------
-            # NORMAL GLOBAL RAG
+            # GLOBAL RAG
             # -----------------------------------------------------
 
             documents = _retrieve_documents(
                 request.message,
-                db
+                db,
             )
 
         # ---------------------------------------------------------
@@ -111,6 +113,7 @@ def chat(request: ChatRequest):
             }
 
             # Semantic retrieval provides similarity scores.
+            # Context-specific retrieval does not need one.
             if "score" in document:
                 source["score"] = document["score"]
 
@@ -122,7 +125,7 @@ def chat(request: ChatRequest):
 
         response = ask_llm(
             request.message,
-            context
+            context,
         )
 
         return {
