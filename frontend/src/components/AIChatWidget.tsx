@@ -7,6 +7,7 @@ interface Source {
   id: number;
   title: string;
   score?: number;
+  mode?: "SEMANTIC" | "CONTEXT" | "LISTING";
 }
 
 interface Message {
@@ -504,20 +505,22 @@ export default function AIChatWidget({
 
                                     </div>
 
-                                    {typeof source.score === "number" ? (
+                                    {source.mode === "SEMANTIC" &&
+                                    typeof source.score === "number" ? (
                                       <div className="mt-1 text-[10px] text-slate-600">
                                         Relevance:{" "}
-                                        {(source.score * 100).toFixed(1)}%
-                                      </div>  
-                                    ) : (
+                                        {(source.score * 100).toFixed(1)}%  
+                                      </div>
+                                    ) : source.mode === "CONTEXT" ? (
                                       <div className="mt-1 text-[10px] text-blue-400/70">
                                         Current context
                                       </div>
-                                      )}
-                                      
-                                      
-                                    
-
+                                    ) : source.mode === "LISTING" ? (
+                                      <div className="mt-1 text-[10px] text-emerald-400/70">
+                                       Knowledge base
+                                      </div>
+                                    ) : null}
+                                                                                                            
                                   </button>
                                 )
                               )}
