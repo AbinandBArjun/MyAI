@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import Literal, Optional
+from typing import Literal, Optional, List
 
 from app.services.chat_service import ask_llm
 from app.rag.retriever import (
@@ -18,9 +18,15 @@ class ChatContext(BaseModel):
     id: int
 
 
+class ChatMessage(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str
+
+
 class ChatRequest(BaseModel):
     message: str
     context: Optional[ChatContext] = None
+    history: List[ChatMessage] = []
 
 
 @router.post("/")
@@ -31,13 +37,6 @@ def chat(request: ChatRequest):
     try:
         # ---------------------------------------------------------
         # CONTEXT-AWARE RETRIEVAL
-        # ---------------------------------------------------------
-        #
-        # If the frontend provides a specific Note or Article,
-        # retrieve only that document.
-        #
-        # Otherwise, perform normal semantic RAG retrieval
-        # across the knowledge base.
         # ---------------------------------------------------------
 
         if request.context:
@@ -112,20 +111,31 @@ def chat(request: ChatRequest):
                 "title": document["title"],
             }
 
-            # Semantic retrieval provides similarity scores.
-            # Context-specific retrieval does not need one.
             if "score" in document:
                 source["score"] = document["score"]
 
             sources.append(source)
 
         # ---------------------------------------------------------
+        # BUILD CONVERSATION HISTORY
+        # ---------------------------------------------------------
+
+        history = [
+            {
+                "role": message.role,
+                "content": message.content,
+            }
+            for message in request.history[-6:]
+        ]
+
+        # ---------------------------------------------------------
         # GENERATE ANSWER
         # ---------------------------------------------------------
 
         response = ask_llm(
-            request.message,
-            context,
+            query=request.message,
+            context=context,
+            history=history,
         )
 
         return {

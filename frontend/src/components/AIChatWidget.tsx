@@ -154,21 +154,19 @@ export default function AIChatWidget({
       const requestBody = {
         message: trimmedMessage,
 
-        /*
-         * When a specific note/article is active,
-         * send its type and ID.
-         *
-         * When GLOBAL is selected, no context is
-         * sent and the backend performs normal RAG.
-         */
+        history: messages.map((message) => ({
+          role: message.role,
+          content: message.content,
+        })),
+
         ...(isUsingSpecificContext && activeContext
           ? {
               context: {
                 type: activeContext.type,
                 id: activeContext.id,
-              },
-            }
-          : {}),
+            },
+          }
+        : {}),
       };
 
       const response = await axios.post(

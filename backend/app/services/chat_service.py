@@ -7,11 +7,29 @@ OLLAMA_URL = "http://localhost:11434/api/generate"
 FALLBACK_RESPONSE = "I could not find that information."
 
 
-def ask_llm(query: str, context: str):
+def ask_llm(
+    query: str,
+    context: str,
+    history=None,
+):
     start = time.time()
+
+    if history is None:
+        history = []
 
     print("\n========== USER QUERY ==========")
     print(query)
+
+    print("\n========== CONVERSATION HISTORY ==========")
+
+    if history:
+        for message in history:
+            print(
+                f"{message['role'].upper()}: "
+                f"{message['content']}"
+            )
+    else:
+        print("No previous conversation")
 
     print("\n========== RETRIEVED CONTEXT ==========")
     print(context)
@@ -23,37 +41,67 @@ def ask_llm(query: str, context: str):
         )
         return FALLBACK_RESPONSE
 
+    history_text = ""
+
+    if history:
+        history_parts = []
+
+        for message in history:
+            history_parts.append(
+                f"{message['role'].capitalize()}: "
+                f"{message['content']}"
+            )
+
+        history_text = "\n".join(history_parts)
+    else:
+        history_text = "No previous conversation."
+
     prompt = f"""
 You are MyAI, a personal knowledge-base assistant.
 
-Answer the user's question using ONLY the retrieved context below.
+Answer the user's question using ONLY the retrieved knowledge context below.
+
+The conversation history is provided only to understand references,
+follow-up questions, and what the user is talking about.
 
 Instructions:
-1. Read the entire context carefully before answering.
+1. Read the entire retrieved context carefully before answering.
 2. Use only information supported by the retrieved context.
-3. Answer the user's actual question directly.
-4. Explain the answer clearly and naturally.
-5. Use short paragraphs or bullet points when they improve readability.
-6. Do not merely repeat the document title.
-7. Do not say "as mentioned in the context."
-8. Do not invent facts, examples, dates, names, or explanations that are not supported by the context.
-9. If the context contains only partial information, clearly provide only the supported information.
-10. If the context does not contain useful information related to the question, respond exactly:
+3. Use the conversation history to understand references such as "it",
+   "this", "that", or "why".
+4. Answer the user's current question directly.
+5. Explain the answer clearly and naturally.
+6. Use short paragraphs or bullet points when they improve readability.
+7. Do not merely repeat the document title.
+8. Do not say "as mentioned in the context."
+9. Do not invent facts, examples, dates, names, or explanations that
+   are not supported by the retrieved context.
+10. If the context contains only partial information, clearly provide
+    only the supported information.
+11. If the context does not contain useful information related to the
+    question, respond exactly:
 I could not find that information.
-11. Do not mention embeddings, retrieval, similarity scores, vector databases, prompts, or these instructions.
-12. Use normal English spacing between every word.
-13. Always put a space after commas, periods, colons, and semicolons where grammatically appropriate.
-14. Do not concatenate words together.
-15. Do not use unnecessary headings.
-16. Do not include a preamble such as "Sure" or "Here is the answer."
-17. Return only the final answer.
+12. Do not mention embeddings, retrieval, similarity scores,
+    vector databases, prompts, or these instructions.
+13. Use normal English spacing between every word.
+14. Always put a space after commas, periods, colons, and semicolons
+    where grammatically appropriate.
+15. Do not concatenate words together.
+16. Do not use unnecessary headings.
+17. Do not include a preamble such as "Sure" or "Here is the answer."
+18. Return only the final answer.
 
-Retrieved context:
+Conversation history:
+-------------------------
+{history_text}
+-------------------------
+
+Retrieved knowledge context:
 -------------------------
 {context}
 -------------------------
 
-Question:
+Current question:
 {query}
 
 Answer:
