@@ -506,19 +506,19 @@ export default function AIChatWidget({
 
                                     </div>
 
-                                    {typeof source.score ===
-                                      "number" && (
+                                    {typeof source.score === "number" ? (
                                       <div className="mt-1 text-[10px] text-slate-600">
                                         Relevance:{" "}
-                                        {(
-                                          source.score *
-                                          100
-                                        ).toFixed(
-                                          1
-                                        )}
-                                        %
+                                        {(source.score * 100).toFixed(1)}%
+                                      </div>  
+                                    ) : (
+                                      <div className="mt-1 text-[10px] text-blue-400/70">
+                                        Current context
                                       </div>
-                                    )}
+                                      )}
+                                      
+                                      
+                                    
 
                                   </button>
                                 )
