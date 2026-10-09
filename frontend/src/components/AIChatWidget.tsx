@@ -255,6 +255,61 @@ export default function AIChatWidget({
     setIsOpen(false);
   };
 
+  const exportConversation = () => {
+    if (messages.length === 0) {
+      return;
+    }
+
+    const contextLabel = getContextLabel();
+
+    const conversation = messages.map((message) => {
+      const speaker =
+        message.role === "user" ? "You" : "MyAI";
+
+      let section = `${speaker}:\n${message.content}`;
+
+      if (
+        message.role === "assistant" &&
+        message.sources &&
+        message.sources.length > 0
+      ) {
+        const sourceLines = message.sources.map((source) => {
+          return `- [${source.type}] ${source.title}`;
+        });
+
+        section += `\n\nSources:\n${sourceLines.join("\n")}`;
+      }
+
+      return section;
+    });
+
+    const exportContent = [
+      "MyAI Conversation",
+      `Context: ${contextLabel}`,
+      `Exported: ${new Date().toLocaleString()}`,
+      "",
+      ...conversation.flatMap((section) => [section, ""]),
+    ].join("\n");
+
+    const blob = new Blob([exportContent], {
+      type: "text/plain;charset=utf-8",
+    });
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = `myai-conversation-${new Date()
+      .toISOString()
+      .replace(/[:.]/g, "-")}.txt`;
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    URL.revokeObjectURL(url);
+  };
+
   /*
    * Manually clear the conversation.
    */
@@ -326,6 +381,17 @@ export default function AIChatWidget({
               </div>
 
               <div className="flex items-center gap-1">
+
+                {messages.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={exportConversation}
+                    className="rounded-lg px-2 py-1.5 text-xs text-slate-500 transition hover:bg-slate-800 hover:text-slate-300"
+                    title="Export conversation"
+                  >
+                    Export
+                  </button>
+                )}
 
                 {messages.length > 0 && (
                   <button
