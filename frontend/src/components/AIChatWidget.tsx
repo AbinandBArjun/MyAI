@@ -37,7 +37,9 @@ export default function AIChatWidget({
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
-
+  const [copiedMessageIndex, setCopiedMessageIndex] =
+    useState<number | null>(null); 
+  
   const [contextMode, setContextMode] =
     useState<ContextMode>("AUTO");
 
@@ -219,6 +221,24 @@ export default function AIChatWidget({
     ) {
       event.preventDefault();
       sendMessage();
+    }
+  };
+
+  const copyAnswer = async (
+    content: string,
+    messageIndex: number
+  ) => {
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopiedMessageIndex(messageIndex);
+
+      window.setTimeout(() => {
+        setCopiedMessageIndex((current) =>
+          current === messageIndex ? null : current
+        );
+      }, 2000);
+    } catch (error) {
+      console.error("Failed to copy AI response:", error);
     }
   };
 
@@ -452,6 +472,30 @@ export default function AIChatWidget({
                       <div className="whitespace-pre-wrap">
                         {item.content}
                       </div>
+
+                      {item.role === "assistant" && (
+                        <div className="mt-2 flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() => copyAnswer(item.content, index)}
+                            className="rounded-md px-2 py-1 text-[11px] text-slate-400 transition hover:bg-slate-700 hover:text-white"
+                            aria-label="Copy AI response"
+                            title="Copy answer"
+                          >
+                            {copiedMessageIndex === index ? (
+                              <span className="inline-flex items-center gap-1 text-emerald-400">
+                                <span>✓</span>
+                                Copied!
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1">
+                                <span>⧉</span>
+                                Copy
+                              </span>
+                            )}
+                          </button>
+                        </div>
+                      )}
 
                       {/* Sources */}
                       {item.role ===
