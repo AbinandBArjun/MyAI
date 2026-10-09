@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface Source {
   type: "NOTE" | "ARTICLE";
@@ -176,6 +178,9 @@ export default function AIChatWidget({
         "http://localhost:8000/chat/",
         requestBody
       );
+
+      console.log("Full chat API response:", response.data);
+      console.log("Raw AI response:", response.data.response);
 
       const assistantMessage: Message = {
         role: "assistant",
@@ -535,8 +540,96 @@ export default function AIChatWidget({
                       }`}
                     >
 
-                      <div className="whitespace-pre-wrap">
-                        {item.content}
+                      <div
+                        className={
+                          item.role === "user"
+                            ? "whitespace-pre-wrap"
+                            : "markdown-content min-w-0 break-words"
+                        }
+                      >
+                        {item.role === "assistant" ? (
+                          <ReactMarkdown
+                            remarkPlugins={[remarkGfm]}
+                            components={{
+                              h2: ({ ...props }) => (
+                                <h2
+                                  {...props}
+                                  className="mb-3 mt-2 text-base font-bold text-white"
+                                />
+                              ),
+                              ol: ({ ...props }) => (
+                                <ol
+                                  {...props}
+                                  className="my-3 list-decimal space-y-2 pl-6"
+                                />
+                              ),
+                              ul: ({ ...props }) => (
+                                <ul
+                                  {...props}
+                                  className="my-3 list-disc space-y-2 pl-6"
+                                />
+                              ),
+                              li: ({ ...props }) => (
+                                <li
+                                  {...props}
+                                  className="pl-1"
+                                />
+                              ),
+                              p: ({ ...props }) => (
+                                <p
+                                  {...props}
+                                  className="my-2"
+                                />
+                              ),
+                              a: ({ ...props }) => (
+                                <a
+                                  {...props}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-sky-400 underline hover:text-sky-300"
+                                />
+                              ),
+                              pre: ({ ...props }) => (
+                                <pre
+                                  {...props}
+                                  className="my-3 overflow-x-auto rounded-lg bg-slate-950 p-3 text-xs"
+                                />
+                              ),
+                              code: ({ className, children, ...props }) => (
+                                <code
+                                  {...props}
+                                  className={`${className ?? ""} rounded bg-slate-950/60 px-1 py-0.5 font-mono text-xs`}
+                                >
+                                  {children}
+                                </code>
+                              ),
+                              table: ({ ...props }) => (
+                                <div className="my-3 overflow-x-auto">
+                                  <table
+                                    {...props}
+                                    className="w-full border-collapse text-sm"
+                                  />
+                                </div>
+                              ),
+                              th: ({ ...props }) => (
+                                <th
+                                  {...props}
+                                  className="border border-slate-600 px-2 py-1 text-left"
+                                />
+                              ),
+                              td: ({ ...props }) => (
+                                <td
+                                  {...props}
+                                  className="border border-slate-600 px-2 py-1"
+                                />
+                              ),
+                            }}
+                          >
+                            {item.content}
+                          </ReactMarkdown>
+                        ) : (
+                          item.content
+                        )}
                       </div>
 
                       {item.role === "assistant" && (
