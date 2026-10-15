@@ -718,17 +718,18 @@ export default function AIChatWidget({
 
                                     {source.mode === "SEMANTIC" &&
                                     typeof source.score === "number" ? (
-                                      <div className="mt-1 text-[10px] text-slate-600">
-                                        Relevance:{" "}
-                                        {(source.score * 100).toFixed(1)}%  
+                                      <div className="mt-1 text-[10px] text-slate-500">
+                                        <span className="text-blue-400">Semantic match</span>
+                                        <span className="mx-1.5">·</span>
+                                        Similarity: {(source.score * 100).toFixed(1)}%
                                       </div>
                                     ) : source.mode === "CONTEXT" ? (
-                                      <div className="mt-1 text-[10px] text-blue-400/70">
-                                        Current context
+                                      <div className="mt-1 text-[10px] text-blue-400/80">
+                                        Selected context · Direct source
                                       </div>
                                     ) : source.mode === "LISTING" ? (
-                                      <div className="mt-1 text-[10px] text-emerald-400/70">
-                                       Knowledge base
+                                      <div className="mt-1 text-[10px] text-emerald-400/80">
+                                        Knowledge base · Listing result
                                       </div>
                                     ) : null}
                                                                                                             
