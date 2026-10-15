@@ -426,20 +426,17 @@ export default function AIChatWidget({
 
             {/* Context Selector */}
             <div className="mt-3">
-
               <div className="mb-1.5 flex items-center justify-between">
-
                 <label
                   htmlFor="ai-context"
                   className="text-[10px] font-semibold uppercase tracking-wide text-slate-500"
                 >
-                  Context
+                  AI Context
                 </label>
 
-                <span className="text-[10px] text-slate-600">
+                <span className="text-[10px] text-slate-500">
                   {getContextTypeLabel()}
                 </span>
-
               </div>
 
               <select
@@ -448,33 +445,44 @@ export default function AIChatWidget({
                 onChange={handleContextChange}
                 className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-slate-300 outline-none transition focus:border-blue-500"
               >
-
-                <option value="AUTO">
-                  Current Page
-                </option>
+                <option value="AUTO">Current Page</option>
 
                 {context?.type === "NOTE" && (
-                  <option value="NOTE">
-                    Current Note
-                  </option>
+                  <option value="NOTE">Current Note</option>
                 )}
 
                 {context?.type === "ARTICLE" && (
-                  <option value="ARTICLE">
-                    Current Article
-                  </option>
+                  <option value="ARTICLE">Current Article</option>
                 )}
 
-                <option value="GLOBAL">
-                  Entire Knowledge Base
-                </option>
-
+                <option value="GLOBAL">Entire Knowledge Base</option>
               </select>
 
-              <div className="mt-1.5 truncate text-[10px] text-slate-600">
-                {getContextLabel()}
-              </div>
+              <div className="mt-2 rounded-lg border border-slate-800 bg-slate-900/60 p-2.5">
+                <div className="flex items-start gap-2">
+                  <span className="mt-0.5 text-blue-400">
+                    {contextMode === "GLOBAL" ? "◉" : "◎"}
+                  </span>
 
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-medium text-slate-300">
+                      {getContextLabel()}
+                    </p>
+
+                    <p className="mt-1 text-[10px] leading-relaxed text-slate-500">
+                      {contextMode === "GLOBAL"
+                        ? "Search across your saved notes and articles for relevant information."
+                        : contextMode === "NOTE"
+                          ? "Use the selected note as the source for your questions."
+                          : contextMode === "ARTICLE"
+                            ? "Use the selected article as the source for your questions."
+                            : context
+                              ? `Ask about the page you're viewing: ${context.title || "Current page"}.`
+                              : "No specific page is selected. MyAI can search your knowledge base for relevant information."}
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
 
           </div>
