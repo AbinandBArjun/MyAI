@@ -6,7 +6,7 @@ venv/
 
 # Node
 frontend/node_modules/
-
+node_modules/
 # Environment Variables
 .env
 
