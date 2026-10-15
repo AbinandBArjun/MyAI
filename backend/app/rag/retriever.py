@@ -39,28 +39,29 @@ def format_documents(documents, document_type: str):
 
 def detect_listing_intent(query: str):
     """
-    Detect simple listing-style queries that should not depend
-    exclusively on semantic similarity.
+    Detect listing-style queries that should retrieve documents
+    directly from the database rather than relying on similarity.
     """
 
     normalized_query = query.lower().strip()
+    normalized_query = re.sub(r"[?!.,]+$", "", normalized_query)
 
     note_patterns = [
         r"\bwhat notes do i have\b",
-        r"\blist my notes\b",
-        r"\bshow my notes\b",
-        r"\bshow me my notes\b",
+        r"\blist (?:all )?(?:my |the |all the )?(?:saved )?notes\b",
+        r"\bshow (?:me )?(?:all )?(?:my |the )?(?:saved )?notes\b",
         r"\bmy saved notes\b",
         r"\bwhat are my notes\b",
+        r"\bshow me everything in my notes\b",
     ]
 
     article_patterns = [
         r"\bwhat articles do i have\b",
-        r"\blist my articles\b",
-        r"\bshow my articles\b",
-        r"\bshow me my articles\b",
+        r"\blist (?:all )?(?:my |the |all the )?(?:saved )?articles\b",
+        r"\bshow (?:me )?(?:all )?(?:my |the )?(?:saved )?articles\b",
         r"\bmy saved articles\b",
         r"\bwhat are my articles\b",
+        r"\bshow me all the articles\b",
     ]
 
     if any(
