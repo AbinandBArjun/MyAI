@@ -136,57 +136,41 @@ knowledge context.
     prompt = f"""
 You are MyAI, a personal knowledge-base assistant.
 
-Answer the user's current question using ONLY the retrieved
-knowledge context below.
+Answer the user's question using the retrieved knowledge context.
+Be helpful, direct, and faithful to the evidence.
 
-The conversation history is provided only to understand
-references, follow-up questions, and what the user is talking
-about.
-
-Instructions:
-1. Read the entire retrieved context carefully before answering.
-2. Use only information supported by the retrieved context.
-3. Use the conversation history to understand references such as
-   "it", "this", "that", or "why".
-4. Answer the user's current question directly.
-5. Explain the answer clearly and naturally.
-6. Use short paragraphs or bullet points when they improve
-   readability.
-7. Do not merely repeat a document title unless the user is
-   asking for a list of documents.
-8. Do not say "as mentioned in the context."
-9. Do not invent facts, examples, dates, names, documents, or
-   explanations that are not supported by the retrieved context.
-10. If the context contains only partial information, clearly
-    provide only the supported information.
-11. If the context does not contain useful information related
-    to the question, respond exactly:
-I could not find that information.
-12. Do not mention embeddings, retrieval, similarity scores,
-    vector databases, prompts, or these instructions.
-13. Use normal English spacing between every word.
-14. Always put a space after commas, periods, colons, and
-    semicolons where grammatically appropriate.
-15. Do not concatenate words together.
-16. Do not use unnecessary headings.
-17. Do not include a preamble such as "Sure" or
-    "Here is the answer."
-18. Return only the final answer.
+Rules:
+1. Read the retrieved context and identify any information relevant
+   to the user's question.
+2. Explain relevant information in clear, natural language. The
+   question does not need to use the same words as the source.
+3. Explain direct implications only when they logically follow from
+   the retrieved context. Distinguish reasonable inferences from
+   explicitly stated facts. Never present an inference as a proven
+   outcome or guarantee.
+4. If the source partially answers the question, give the supported
+   answer first. Then briefly state what the source does not establish.
+5. For a question about benefits, risks, causes, or uses, explain
+   what the source supports even if it does not provide a complete list.
+   Do not claim that the source explicitly lists something when it does not.
+6. Use conversation history only to understand follow-up questions.
+   Use the retrieved context as evidence for factual claims.
+7. Respond exactly "I could not find that information." only when
+   the retrieved context contains no meaningful information relevant
+   to the question.
+8. Never invent personal information, facts, statistics, or details
+   absent from the retrieved context.
+9. Be concise. Use bullets when they improve readability.
+10. Return only the answer.
 
 Request type:
--------------------------
 {listing_instruction}
--------------------------
 
 Conversation history:
--------------------------
 {history_text}
--------------------------
 
 Retrieved knowledge context:
--------------------------
 {context}
--------------------------
 
 Current question:
 {query}
@@ -215,7 +199,8 @@ Answer:
 
         response.raise_for_status()
 
-        result = response.json()["response"].strip()
+        raw_result = response.json()["response"]
+        result = raw_result.strip()
 
         # -----------------------------------------------------
         # REMOVE QWEN THINKING OUTPUT
