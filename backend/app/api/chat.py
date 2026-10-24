@@ -1,3 +1,5 @@
+import re
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from typing import Literal, Optional, List
@@ -12,6 +14,33 @@ from app.database.database import SessionLocal
 
 
 router = APIRouter()
+
+
+def build_learning_fallback_query(question: str) -> Optional[str]:
+    """
+    Build an alternative retrieval query for broad learning-path
+    questions. Return None for unrelated questions.
+    """
+    normalized = question.lower().strip()
+    normalized = normalized.rstrip("?!., ")
+
+    learning_patterns = [
+        r"\bwhat should i learn next\b",
+        r"\bwhat should i study next\b",
+        r"\bwhich topics should i learn\b",
+        r"\bwhich topics should i study\b",
+        r"\bwhat concepts should i study next\b",
+        r"\bwhat topics should i study next\b",
+    ]
+
+    if any(re.search(pattern, normalized) for pattern in learning_patterns):
+        return (
+            "LLMs, prompt templates, chains, workflows, tool calling, "
+            "AI agents, memory, retrieval-augmented generation, "
+            "vector databases, agent planning and execution"
+        )
+
+    return None
 
 
 class ChatContext(BaseModel):
@@ -250,6 +279,28 @@ def chat(request: ChatRequest):
                 retrieval_query,
                 db,
             )
+
+            # Try a targeted fallback only when normal retrieval finds nothing.
+            if not documents and not listing_type and not request.context:
+                fallback_query = build_learning_fallback_query(
+                    request.message
+                )
+
+                if fallback_query:
+                    print("\n========== LEARNING FALLBACK QUERY ==========")
+                    print(fallback_query)
+
+                    fallback_documents = _retrieve_documents(
+                        fallback_query,
+                        db,
+                    )
+
+                    # This fallback is specifically for learning from saved notes.
+                    documents = [
+                        document
+                        for document in fallback_documents
+                        if document["type"] == "NOTE"
+                    ]
 
             if listing_type:
                 retrieval_mode = "LISTING"
