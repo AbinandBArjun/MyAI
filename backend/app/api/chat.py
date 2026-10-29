@@ -7,6 +7,7 @@ from typing import Literal, Optional, List
 from app.services.chat_service import ask_llm
 from app.rag.retriever import (
     _retrieve_documents,
+    _semantic_retrieve,
     _get_document,
     detect_listing_intent,
 )
@@ -290,17 +291,13 @@ def chat(request: ChatRequest):
                     print("\n========== LEARNING FALLBACK QUERY ==========")
                     print(fallback_query)
 
-                    fallback_documents = _retrieve_documents(
+                    fallback_documents = _semantic_retrieve(
                         fallback_query,
                         db,
+                        document_type="NOTE",
                     )
 
-                    # This fallback is specifically for learning from saved notes.
-                    documents = [
-                        document
-                        for document in fallback_documents
-                        if document["type"] == "NOTE"
-                    ]
+                    documents = fallback_documents
 
             if listing_type:
                 retrieval_mode = "LISTING"

@@ -107,26 +107,27 @@ def _get_document(
 
 def _semantic_retrieve(
     query: str,
-    db: Session
+    db: Session,
+    document_type: str | None = None,
 ):
     """
     Perform semantic retrieval once and return structured
     candidate documents.
 
-    Each candidate contains:
-    - document type
-    - document ID
-    - title
-    - content
-    - similarity score
+    If document_type is supplied, retrieve only that type.
+    Otherwise, search both notes and articles.
     """
 
     query_embedding = get_embedding(query)
 
-    stored_embeddings = (
-        db.query(DocumentEmbedding)
-        .all()
-    )
+    embedding_query = db.query(DocumentEmbedding)
+
+    if document_type is not None:
+        embedding_query = embedding_query.filter(
+            DocumentEmbedding.document_type == document_type
+        )
+
+    stored_embeddings = embedding_query.all()
 
     candidates = []
 
@@ -151,7 +152,7 @@ def _semantic_retrieve(
             stored_embedding.document_id
         )
 
-        # Skip embeddings whose original document no longer exists
+        # Skip embeddings whose original document no longer exists.
         if document is None:
             continue
 
