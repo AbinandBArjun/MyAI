@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import axios, { type AxiosError } from "axios";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -192,16 +192,37 @@ export default function AIChatWidget({
         ...previous,
         assistantMessage,
       ]);
-    } catch (error) {
-      console.error(
-        "Chat request failed:",
-        error
-      );
+    } catch (error: unknown) {
+      console.error("Chat request failed:", error);
+
+      let errorDetails: string;
+
+      if (axios.isAxiosError(error)) {
+        const axiosError = error as AxiosError;
+
+        if (axiosError.response) {
+          errorDetails =
+            `The server returned an error (HTTP ${axiosError.response.status}).`;
+
+          console.error(
+            "Backend error response:",
+            axiosError.response.data
+          );
+        } else if (axiosError.code === "ECONNABORTED") {
+          errorDetails = "The request timed out. Please try again.";
+        } else if (axiosError.request) {
+          errorDetails =
+            "Could not connect to the backend. Check whether the server is running.";
+        } else {
+          errorDetails = axiosError.message;
+        }
+      } else {
+        errorDetails = "An unexpected error occurred while processing your request.";
+      }
 
       const errorMessage: Message = {
         role: "assistant",
-        content:
-          "Sorry, I couldn't process your request. Please make sure the backend server is running and try again.",
+        content: errorDetails,
         sources: [],
       };
 
