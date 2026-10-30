@@ -2,6 +2,7 @@ from app.database.database import SessionLocal
 from app.models.article import Article
 from app.ingestion.techcrunch import fetch_articles
 from app.services.embedding_service import save_embedding
+from app.services.chunk_indexing_service import index_document_chunks
 
 
 def save_articles():
@@ -9,11 +10,9 @@ def save_articles():
 
     try:
         articles = fetch_articles()
-
         count = 0
 
         for article in articles:
-
             existing = (
                 db.query(Article)
                 .filter(Article.url == article["url"])
@@ -31,8 +30,6 @@ def save_articles():
             )
 
             db.add(new_article)
-
-            # Generate the article ID before creating its embedding
             db.flush()
 
             text = (
@@ -47,11 +44,22 @@ def save_articles():
                 text=text
             )
 
+            index_document_chunks(
+                db=db,
+                document_type="ARTICLE",
+                document_id=new_article.id,
+                title=new_article.title,
+                content=new_article.summary
+            )
+
             count += 1
 
         db.commit()
-
         print(f"Saved {count} new articles")
+
+    except Exception:
+        db.rollback()
+        raise
 
     finally:
         db.close()

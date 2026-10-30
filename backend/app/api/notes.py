@@ -8,6 +8,10 @@ from app.services.embedding_service import (
     save_embedding,
     delete_embedding
 )
+from app.services.chunk_indexing_service import (
+    index_document_chunks,
+    delete_document_chunks
+)
 
 router = APIRouter()
 
@@ -48,25 +52,40 @@ def create_note(
     note: NoteCreate,
     db: Session = Depends(get_db)
 ):
-    new_note = Note(
-        title=note.title,
-        content=note.content
-    )
+    try:
+        new_note = Note(
+            title=note.title,
+            content=note.content
+        )
 
-    db.add(new_note)
-    db.commit()
-    db.refresh(new_note)
+        db.add(new_note)
+        db.flush()
 
-    text = f"{new_note.title}\n{new_note.content}"
+        text = f"{new_note.title}\n{new_note.content}"
 
-    save_embedding(
-        db=db,
-        document_type="NOTE",
-        document_id=new_note.id,
-        text=text
-    )
+        save_embedding(
+            db=db,
+            document_type="NOTE",
+            document_id=new_note.id,
+            text=text
+        )
 
-    return new_note
+        index_document_chunks(
+            db=db,
+            document_type="NOTE",
+            document_id=new_note.id,
+            title=new_note.title,
+            content=new_note.content
+        )
+
+        db.commit()
+        db.refresh(new_note)
+
+        return new_note
+
+    except Exception:
+        db.rollback()
+        raise
 
 
 @router.put("/{note_id}")
@@ -87,22 +106,35 @@ def update_note(
             detail="Note not found"
         )
 
-    note.title = updated_note.title
-    note.content = updated_note.content
+    try:
+        note.title = updated_note.title
+        note.content = updated_note.content
 
-    db.commit()
-    db.refresh(note)
+        text = f"{note.title}\n{note.content}"
 
-    text = f"{note.title}\n{note.content}"
+        save_embedding(
+            db=db,
+            document_type="NOTE",
+            document_id=note.id,
+            text=text
+        )
 
-    save_embedding(
-        db=db,
-        document_type="NOTE",
-        document_id=note.id,
-        text=text
-    )
+        index_document_chunks(
+            db=db,
+            document_type="NOTE",
+            document_id=note.id,
+            title=note.title,
+            content=note.content
+        )
 
-    return note
+        db.commit()
+        db.refresh(note)
+
+        return note
+
+    except Exception:
+        db.rollback()
+        raise
 
 
 @router.delete("/{note_id}")
@@ -122,15 +154,26 @@ def delete_note(
             detail="Note not found"
         )
 
-    delete_embedding(
-        db=db,
-        document_type="NOTE",
-        document_id=note.id
-    )
+    try:
+        delete_embedding(
+            db=db,
+            document_type="NOTE",
+            document_id=note.id
+        )
 
-    db.delete(note)
-    db.commit()
+        delete_document_chunks(
+            db=db,
+            document_type="NOTE",
+            document_id=note.id
+        )
 
-    return {
-        "message": "Note deleted"
-    }
+        db.delete(note)
+        db.commit()
+
+        return {
+            "message": "Note deleted"
+        }
+
+    except Exception:
+        db.rollback()
+        raise

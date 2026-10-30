@@ -11,11 +11,12 @@ def save_embedding(
     text: str
 ):
     """
-    Create or update the embedding for a document.
+    Create or update a document embedding.
+
+    Does not commit. The caller owns the transaction.
     """
 
     embedding = get_embedding(text)
-
     embedding_list = embedding.tolist()
 
     existing = (
@@ -29,17 +30,13 @@ def save_embedding(
 
     if existing:
         existing.embedding = embedding_list
-
     else:
         new_embedding = DocumentEmbedding(
             document_type=document_type,
             document_id=document_id,
             embedding=embedding_list
         )
-
         db.add(new_embedding)
-
-    db.commit()
 
 
 def delete_embedding(
@@ -49,6 +46,8 @@ def delete_embedding(
 ):
     """
     Delete the embedding associated with a document.
+
+    Does not commit. The caller owns the transaction.
     """
 
     existing = (
@@ -62,4 +61,3 @@ def delete_embedding(
 
     if existing:
         db.delete(existing)
-        db.commit()
