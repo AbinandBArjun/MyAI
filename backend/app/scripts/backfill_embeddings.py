@@ -2,7 +2,10 @@ from app.database.database import SessionLocal
 from app.models.note import Note
 from app.models.article import Article
 from app.models.document_embedding import DocumentEmbedding
+from app.models.document_chunk import DocumentChunk
+
 from app.services.embedding_service import save_embedding
+from app.services.chunk_indexing_service import index_document_chunks
 
 
 def embedding_exists(
@@ -21,49 +24,89 @@ def embedding_exists(
     )
 
 
+def chunks_exist(
+    db,
+    document_type: str,
+    document_id: int
+):
+    return (
+        db.query(DocumentChunk)
+        .filter(
+            DocumentChunk.document_type == document_type,
+            DocumentChunk.document_id == document_id
+        )
+        .first()
+        is not None
+    )
+
+
 def backfill_embeddings():
     db = SessionLocal()
 
-    notes_added = 0
-    articles_added = 0
+    notes_embeddings_added = 0
+    articles_embeddings_added = 0
+    notes_chunks_added = 0
+    articles_chunks_added = 0
 
     try:
         notes = db.query(Note).all()
 
         for note in notes:
-            if embedding_exists(db, "NOTE", note.id):
-                continue
-
             text = f"{note.title}\n{note.content}"
 
-            save_embedding(
-                db=db,
-                document_type="NOTE",
-                document_id=note.id,
-                text=text
-            )
+            if not embedding_exists(db, "NOTE", note.id):
+                save_embedding(
+                    db=db,
+                    document_type="NOTE",
+                    document_id=note.id,
+                    text=text
+                )
+                notes_embeddings_added += 1
 
-            notes_added += 1
+            if not chunks_exist(db, "NOTE", note.id):
+                count = index_document_chunks(
+                    db=db,
+                    document_type="NOTE",
+                    document_id=note.id,
+                    title=note.title,
+                    content=note.content
+                )
+                notes_chunks_added += count
 
         articles = db.query(Article).all()
 
         for article in articles:
-            if embedding_exists(db, "ARTICLE", article.id):
-                continue
-
             text = f"{article.title}\n{article.summary}"
 
-            save_embedding(
-                db=db,
-                document_type="ARTICLE",
-                document_id=article.id,
-                text=text
-            )
+            if not embedding_exists(db, "ARTICLE", article.id):
+                save_embedding(
+                    db=db,
+                    document_type="ARTICLE",
+                    document_id=article.id,
+                    text=text
+                )
+                articles_embeddings_added += 1
 
-            articles_added += 1
+            if not chunks_exist(db, "ARTICLE", article.id):
+                count = index_document_chunks(
+                    db=db,
+                    document_type="ARTICLE",
+                    document_id=article.id,
+                    title=article.title,
+                    content=article.summary
+                )
+                articles_chunks_added += count
 
-        print(f"Backfilled {notes_added} notes")
-        print(f"Backfilled {articles_added} articles")
+        db.commit()
+
+        print(f"Backfilled note embeddings: {notes_embeddings_added}")
+        print(f"Backfilled article embeddings: {articles_embeddings_added}")
+        print(f"Backfilled note chunks: {notes_chunks_added}")
+        print(f"Backfilled article chunks: {articles_chunks_added}")
+
+    except Exception:
+        db.rollback()
+        raise
 
     finally:
         db.close()

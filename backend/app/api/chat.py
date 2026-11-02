@@ -7,9 +7,13 @@ from typing import Literal, Optional, List
 from app.services.chat_service import ask_llm
 from app.rag.retriever import (
     _retrieve_documents,
-    _semantic_retrieve,
     _get_document,
     detect_listing_intent,
+)
+
+from app.rag.chunk_retriever import (
+    retrieve_relevant_chunks,
+    group_chunks_by_document,
 )
 from app.database.database import SessionLocal
 
@@ -276,10 +280,23 @@ def chat(request: ChatRequest):
             )
             print(retrieval_query)
 
-            documents = _retrieve_documents(
-                retrieval_query,
-                db,
-            )
+            if listing_type:
+                # Preserve database-based listing retrieval.
+                documents = _retrieve_documents(
+                    retrieval_query,
+                    db,
+                )
+
+            else:
+                # Use chunk-based retrieval for normal questions.
+                retrieved_chunks = retrieve_relevant_chunks(
+                    query=retrieval_query,
+                    db=db,
+                )
+
+                documents = group_chunks_by_document(
+                    retrieved_chunks
+                )
 
             # Try a targeted fallback only when normal retrieval finds nothing.
             if not documents and not listing_type and not request.context:
@@ -291,10 +308,14 @@ def chat(request: ChatRequest):
                     print("\n========== LEARNING FALLBACK QUERY ==========")
                     print(fallback_query)
 
-                    fallback_documents = _semantic_retrieve(
-                        fallback_query,
-                        db,
+                    fallback_chunks = retrieve_relevant_chunks(
+                        query=fallback_query,
+                        db=db,
                         document_type="NOTE",
+                    )
+
+                    fallback_documents = group_chunks_by_document(
+                        fallback_chunks
                     )
 
                     documents = fallback_documents
