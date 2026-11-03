@@ -6,7 +6,8 @@ from sentence_transformers import util
 from app.models.document_chunk import DocumentChunk
 from app.models.note import Note
 from app.models.article import Article
-from app.rag.embeddings import get_embedding
+from app.rag.embeddings import get_embedding, model
+from app.services.chunking_service import CHUNK_OVERLAP
 
 
 CHUNK_TOP_K = 10
@@ -141,14 +142,72 @@ def retrieve_relevant_chunks(
     return relevant_chunks
 
 
+def _remove_adjacent_overlap(
+    previous_content: str,
+    current_content: str,
+) -> str:
+    """
+    Remove confirmed token overlap between adjacent chunks.
+
+    If a reliable overlap cannot be established,
+    preserve the complete current chunk.
+    """
+
+    tokenizer = model.tokenizer
+
+    previous_ids = tokenizer.encode(
+        previous_content,
+        add_special_tokens=False,
+    )
+
+    current_encoded = tokenizer(
+        current_content,
+        add_special_tokens=False,
+        return_offsets_mapping=True,
+    )
+
+    current_ids = current_encoded["input_ids"]
+    offsets = current_encoded["offset_mapping"]
+
+    min_overlap = max(1, CHUNK_OVERLAP - 8)
+    max_overlap = CHUNK_OVERLAP + 16
+
+    max_overlap = min(
+        max_overlap,
+        len(previous_ids),
+        len(current_ids),
+    )
+
+    # Search for the longest plausible overlap.
+    for size in range(max_overlap, min_overlap - 1, -1):
+
+        if previous_ids[-size:] == current_ids[:size]:
+
+            # Use tokenizer offsets to identify the exact
+            # character position after the duplicate prefix.
+            overlap_end = offsets[size - 1][1]
+
+            remaining_content = current_content[
+                overlap_end:
+            ].lstrip()
+
+            return remaining_content
+
+    # No reliable overlap found: preserve all content.
+    return current_content
+
+
 def group_chunks_by_document(
     chunks: list[dict],
 ):
     """
     Group retrieved chunks by their parent document.
 
-    Each parent document appears only once.
-    Chunks are ordered by their original chunk index.
+    Consecutive chunks have confirmed overlapping text removed.
+    Non-consecutive chunks remain independent.
+
+    Original chunk metadata and maximum document similarity
+    scores are preserved.
     """
 
     grouped = {}
@@ -192,9 +251,41 @@ def group_chunks_by_document(
             key=lambda item: item["chunk_index"]
         )
 
+        content_parts = []
+
+        previous_chunk = None
+
+        for chunk in document["chunks"]:
+
+            current_content = chunk["content"]
+
+            if previous_chunk is not None:
+
+                is_adjacent = (
+                    chunk["chunk_index"]
+                    == previous_chunk["chunk_index"] + 1
+                )
+
+                if is_adjacent:
+                    current_content = _remove_adjacent_overlap(
+                        previous_chunk["content"],
+                        current_content,
+                    )
+
+                    if current_content:
+                        content_parts.append(current_content)
+
+                else:
+                    # Missing chunk indices break overlap merging.
+                    content_parts.append(current_content)
+
+            else:
+                content_parts.append(current_content)
+
+            previous_chunk = chunk
+
         document["content"] = "\n\n".join(
-            chunk["content"]
-            for chunk in document["chunks"]
+            part for part in content_parts if part
         )
 
         documents.append(document)
@@ -205,4 +296,3 @@ def group_chunks_by_document(
     )
 
     return documents
-
