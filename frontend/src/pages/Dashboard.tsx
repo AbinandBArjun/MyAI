@@ -18,6 +18,8 @@ interface Note {
 export default function Dashboard() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
+  const [totalArticles, setTotalArticles] = useState(0);
+  const [totalNotes, setTotalNotes] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -31,8 +33,10 @@ export default function Dashboard() {
         const articlesData = await articlesResponse.json();
         const notesData = await notesResponse.json();
 
-        setArticles(articlesData);
-        setNotes(notesData);
+        setArticles(articlesData.items ?? []);
+        setNotes(notesData.items ?? []);
+        setTotalArticles(articlesData.pagination?.total_items ?? 0);
+        setTotalNotes(notesData.pagination?.total_items ?? 0);
       } catch (error) {
         console.error("Failed to load dashboard data:", error);
       } finally {
@@ -76,7 +80,7 @@ export default function Dashboard() {
           <p className="text-sm text-slate-500">Articles</p>
 
           <p className="mt-3 text-3xl font-semibold text-white">
-            {articles.length}
+            {totalArticles}
           </p>
 
           <p className="mt-2 text-xs text-slate-500">
@@ -88,7 +92,7 @@ export default function Dashboard() {
           <p className="text-sm text-slate-500">Notes</p>
 
           <p className="mt-3 text-3xl font-semibold text-white">
-            {notes.length}
+            {totalNotes}
           </p>
 
           <p className="mt-2 text-xs text-slate-500">

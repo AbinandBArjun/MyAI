@@ -9,21 +9,45 @@ interface Article {
   url: string;
 }
 
+interface Pagination {
+  page: number;
+  page_size: number;
+  total_items: number;
+  total_pages: number;
+  has_next: boolean;
+  has_previous: boolean;
+}
+
 export default function News() {
   const [articles, setArticles] = useState<Article[]>([]);
+  const [pagination, setPagination] = useState<Pagination>({
+    page: 1,
+    page_size: 20,
+    total_items: 0,
+    total_pages: 0,
+    has_next: false,
+    has_previous: false,
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
-  const fetchArticles = async () => {
+  const fetchArticles = async (pageToFetch: number = 1) => {
     try {
       setLoading(true);
       setError(false);
 
       const response = await axios.get(
-        "http://localhost:8000/articles"
+        "http://localhost:8000/articles",
+        {
+          params: {
+            page: pageToFetch,
+            page_size: 20,
+          },
+        }
       );
 
-      setArticles(response.data);
+      setArticles(response.data.items);
+      setPagination(response.data.pagination);
     } catch (error) {
       console.error("Failed to fetch articles:", error);
       setError(true);
@@ -56,8 +80,8 @@ export default function News() {
           </div>
 
           <div className="rounded-full border border-slate-700 bg-slate-900 px-4 py-2 text-sm text-gray-300">
-            {articles.length}{" "}
-            {articles.length === 1 ? "article" : "articles"}
+            {pagination.total_items}{" "}
+            {pagination.total_items === 1 ? "article" : "articles"}
           </div>
         </div>
       </section>
@@ -85,7 +109,7 @@ export default function News() {
           </p>
 
           <button
-            onClick={fetchArticles}
+            onClick={() => fetchArticles(pagination.page)}
             className="mt-5 rounded-lg bg-red-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-400"
           >
             Try Again
@@ -150,6 +174,33 @@ export default function News() {
             </article>
           ))}
         </section>
+      )}
+
+      {/* Pagination Controls */}
+      {!loading && !error && pagination.total_pages > 1 && (
+        <div className="flex flex-col items-center justify-between gap-4 border-t border-slate-800 pt-6 sm:flex-row">
+          <p className="text-sm text-gray-400">
+            Page {pagination.page} of {pagination.total_pages}
+          </p>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => fetchArticles(pagination.page - 1)}
+              disabled={!pagination.has_previous}
+              className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-gray-300 transition hover:border-slate-600 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Previous
+            </button>
+
+            <button
+              onClick={() => fetchArticles(pagination.page + 1)}
+              disabled={!pagination.has_next}
+              className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-gray-300 transition hover:border-slate-600 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Next
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

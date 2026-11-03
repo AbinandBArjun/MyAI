@@ -7,10 +7,27 @@ interface Note {
   content: string;
 }
 
+interface Pagination {
+  page: number;
+  page_size: number;
+  total_items: number;
+  total_pages: number;
+  has_next: boolean;
+  has_previous: boolean;
+}
+
 export default function Notes() {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [notes, setNotes] = useState<Note[]>([]);
+  const [pagination, setPagination] = useState<Pagination>({
+    page: 1,
+    page_size: 20,
+    total_items: 0,
+    total_pages: 0,
+    has_next: false,
+    has_previous: false,
+  });
   const [editingId, setEditingId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -18,13 +35,20 @@ export default function Notes() {
 
   const API_URL = "http://localhost:8000/notes";
 
-  const fetchNotes = async () => {
+  const fetchNotes = async (pageToFetch: number = 1) => {
     try {
       setLoading(true);
       setError(false);
 
-      const response = await axios.get(API_URL);
-      setNotes(response.data);
+      const response = await axios.get(API_URL, {
+        params: {
+          page: pageToFetch,
+          page_size: 20,
+        },
+      });
+
+      setNotes(response.data.items);
+      setPagination(response.data.pagination);
     } catch (error) {
       console.error("Failed to fetch notes:", error);
       setError(true);
@@ -51,7 +75,7 @@ export default function Notes() {
       });
 
       clearForm();
-      await fetchNotes();
+      await fetchNotes(1);
     } catch (error) {
       console.error("Failed to create note:", error);
     } finally {
@@ -71,7 +95,7 @@ export default function Notes() {
       });
 
       clearForm();
-      await fetchNotes();
+      await fetchNotes(pagination.page);
     } catch (error) {
       console.error("Failed to update note:", error);
     } finally {
@@ -104,7 +128,12 @@ export default function Notes() {
         clearForm();
       }
 
-      await fetchNotes();
+      const nextPage =
+        notes.length === 1 && pagination.page > 1
+          ? pagination.page - 1
+          : pagination.page;
+
+      await fetchNotes(nextPage);
     } catch (error) {
       console.error("Failed to delete note:", error);
     }
@@ -137,7 +166,8 @@ export default function Notes() {
           </div>
 
           <div className="rounded-full border border-slate-700 bg-slate-900 px-4 py-2 text-sm text-gray-300">
-            {notes.length} {notes.length === 1 ? "note" : "notes"}
+            {pagination.total_items}{" "}
+            {pagination.total_items === 1 ? "note" : "notes"}
           </div>
         </div>
       </section>
@@ -234,7 +264,7 @@ export default function Notes() {
           </p>
 
           <button
-            onClick={fetchNotes}
+            onClick={() => fetchNotes(pagination.page)}
             className="mt-5 rounded-lg bg-red-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-400"
           >
             Try Again
@@ -313,6 +343,33 @@ export default function Notes() {
             ))}
           </div>
         </section>
+      )}
+
+      {/* Pagination Controls */}
+      {!loading && !error && pagination.total_pages > 1 && (
+        <div className="flex flex-col items-center justify-between gap-4 border-t border-slate-800 pt-6 sm:flex-row">
+          <p className="text-sm text-gray-400">
+            Page {pagination.page} of {pagination.total_pages}
+          </p>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => fetchNotes(pagination.page - 1)}
+              disabled={!pagination.has_previous}
+              className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-gray-300 transition hover:border-slate-600 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Previous
+            </button>
+
+            <button
+              onClick={() => fetchNotes(pagination.page + 1)}
+              disabled={!pagination.has_next}
+              className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-gray-300 transition hover:border-slate-600 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Next
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.database.database import get_db
@@ -17,14 +17,37 @@ router = APIRouter()
 
 
 @router.get("/")
-def get_notes(db: Session = Depends(get_db)):
+def get_notes(
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    db: Session = Depends(get_db),
+):
+    query = db.query(Note).order_by(Note.id.desc())
+
+    total_items = query.count()
+
+    total_pages = (
+        (total_items + page_size - 1) // page_size
+    )
+
     notes = (
-        db.query(Note)
-        .order_by(Note.id.desc())
+        query
+        .offset((page - 1) * page_size)
+        .limit(page_size)
         .all()
     )
 
-    return notes
+    return {
+        "items": notes,
+        "pagination": {
+            "page": page,
+            "page_size": page_size,
+            "total_items": total_items,
+            "total_pages": total_pages,
+            "has_next": page < total_pages,
+            "has_previous": page > 1,
+        },
+    }
 
 
 @router.get("/{note_id}")
